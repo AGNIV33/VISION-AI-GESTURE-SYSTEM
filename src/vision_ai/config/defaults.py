@@ -75,8 +75,8 @@ class GestureConfig:
     finger_extended: float = 1.30  # tip-to-wrist / middle-joint-to-wrist above this = straight
     finger_folded: float = 1.10  # below this = curled
     scroll_gain: float = 1.8  # wheel units per box unit of hand movement (120 = one notch)
-    scroll_deadband_units: float = 1.0  # ignore smaller moves per picture (noise)
+    scroll_deadband_units: float = 0.3  # ignore smaller moves per picture (noise)
     zoom_gain: float = 2.4  # wheel units per box unit of hand movement (up = zoom in)
     zoom_confirm_frames: int = 4  # thumb on index+middle this long before zoom starts
-    pose_exit_frames: int = 3  # pose must be gone this many pictures to end scrolling
+    pose_exit_frames: int = 6  # pose must be gone this many pictures to end scrolling
     fist_hold_s: float = 1.5  # hold a fist this long to pause / resume

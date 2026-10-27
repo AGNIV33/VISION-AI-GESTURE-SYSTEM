@@ -140,7 +140,7 @@ def test_scroll_ignores_tiny_jitter():
 def test_scroll_ends_when_pose_ends():
     run = Runner()
     run.feed(pose(fingers=PEACE), frames=5)
-    assert run.feed(pose(), frames=3).state == IDLE
+    assert run.feed(pose(), frames=8).state == IDLE
 
 
 def test_holding_a_fist_toggles_pause_once():
@@ -221,7 +221,7 @@ def test_zoom_ends_when_fingers_open_and_no_click_after_real_zoom():
     run.feed(pose(idx=0.1, mid=0.1), frames=6)
     for i in range(1, 30):
         run.feed(pose(idx=0.1, mid=0.1), pos=(500.0, 500.0 - 5 * i))
-    run.feed(pose(), frames=5)
+    run.feed(pose(), frames=8)
     assert run.out.state == IDLE
     assert ("click", "left") not in run.events
 
@@ -230,7 +230,7 @@ def test_quick_pinch_with_middle_close_still_clicks():
     run = Runner()
     run.feed(pose(), frames=3)
     run.feed(pose(idx=0.1, mid=0.1), frames=5)  # ~170 ms, no movement
-    run.feed(pose(), frames=4)
+    run.feed(pose(), frames=8)
     assert run.events == [("click", "left")]
 
 
@@ -238,3 +238,13 @@ def test_dispatcher_zoom_is_ctrl_wheel_and_releases_ctrl():
     b = FakeBackend()
     Dispatcher(b, lambda: None).handle([("zoom", 40)], paused=False)
     assert b.calls == [("key", "ctrl", True), ("wheel", 40, False), ("key", "ctrl", False)]
+
+
+def test_slow_scroll_is_not_lost_and_half_seen_finger_keeps_scrolling():
+    run = Runner()
+    run.feed(pose(fingers=PEACE), frames=3)
+    half = (EXT, EXT, 0, FOLD)  # ring finger half seen (UNKNOWN)
+    for i in range(1, 31):  # very slow move: 0.5 unit per picture
+        run.feed(pose(fingers=half), pos=(500.0, 500.0 - 0.5 * i))
+    assert run.out.state == SCROLL
+    assert sum(e[1] for e in run.events if e[0] == "scroll") > 20

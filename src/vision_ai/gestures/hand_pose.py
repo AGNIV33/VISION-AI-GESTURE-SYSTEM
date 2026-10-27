@@ -37,6 +37,13 @@ class HandPose:
         i, m, r, p = self.fingers
         return i == EXT and m == EXT and r == FOLD and p == FOLD
 
+    @property
+    def keeps_scroll_pose(self) -> bool:
+        """Lenient check while already scrolling: two fingers up, ring and pinky not up.
+        (A half-seen finger must not stop the scroll.)"""
+        i, m, r, p = self.fingers
+        return i == EXT and m == EXT and r != EXT and p != EXT
+
 
 def _points(hand: Hand) -> np.ndarray:
     """2D points with x stretched by the picture shape, so distances are real."""

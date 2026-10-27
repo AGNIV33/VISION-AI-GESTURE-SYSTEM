@@ -146,7 +146,7 @@ class GestureRecognizer:
                 self._go(IDLE, t)
 
         elif s == SCROLL:
-            self._pose_off = 0 if pose.is_scroll_pose else self._pose_off + 1
+            self._pose_off = 0 if pose.keeps_scroll_pose else self._pose_off + 1
             if self._pose_off >= c.pose_exit_frames:
                 self._go(IDLE, t)
             elif self._last_pos is not None:
