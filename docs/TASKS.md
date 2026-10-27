@@ -38,7 +38,7 @@ Update this file in the same commit as the work. Each phase ends with a demo che
 
 ## Phase 3: Core gestures
 - [~] Gesture state machine (`gestures/recognizer.py`, `hand_pose.py`, `actions/dispatcher.py`)
-- [~] Tap (with cursor freeze on pinch start)
+- [~] Tap (with cursor freeze on pinch start). First real test: did not click -> added `--calibrate`
 - [~] Double tap (second tap snaps to the first tap's spot; Windows turns two clicks into a double-click)
 - [~] Right click (thumb + middle)
 - [~] Drag (pinch + move, or pinch held 0.4 s)

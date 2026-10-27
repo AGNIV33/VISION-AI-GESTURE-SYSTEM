@@ -16,6 +16,7 @@ def build_parser() -> argparse.ArgumentParser:
     mode.add_argument("--check", action="store_true", help="test camera, model and speed")
     mode.add_argument("--debug", action="store_true", help="show hand tracking (mouse NOT moved)")
     mode.add_argument("--cursor", action="store_true", help="show tracking AND move the mouse")
+    mode.add_argument("--calibrate", action="store_true", help="measure your pinch numbers")
     p.add_argument("--camera", type=int, default=0, help="camera number (default 0)")
     p.add_argument("--backend", choices=["dshow", "msmf", "auto"], help="camera backend")
     p.add_argument("--size", help="camera picture size, for example 640x480")
@@ -49,7 +50,12 @@ def run_app(args: argparse.Namespace, camera: CameraConfig, control: bool) -> in
     from vision_ai.ui.preview import run_preview
 
     cursor_cfg = replace(CursorConfig(), main_hand=args.main_hand)
-    recognizer = GestureRecognizer()
+    from vision_ai.config.calibration import load_gesture_config
+
+    gesture_cfg, calibrated = load_gesture_config()
+    if not calibrated and not args.calibrate:
+        print("Tip: run  python -m vision_ai --calibrate  once so clicks fit your hand.")
+    recognizer = GestureRecognizer(gesture_cfg)
     dispatcher = mover = None
     pipe_ref: list = []
     enable_dpi_awareness()
@@ -88,6 +94,10 @@ def run_app(args: argparse.Namespace, camera: CameraConfig, control: bool) -> in
             print("Mouse control is ON. Stop with Esc/Q in the preview window, or Ctrl+C here.")
             if seconds:
                 print(f"It stops by itself after {seconds:.0f} seconds (change with --seconds).")
+        if args.calibrate:
+            from vision_ai.ui.calibrate import run_calibration
+
+            return run_calibration(pipe, cursor_cfg.box)
         reason, summary = run_preview(pipe, cursor_cfg.box, control, seconds)
         print(f"Stopped: {reason}")
         print(f"SPEED SUMMARY: {summary}")
@@ -120,7 +130,7 @@ def main(argv: list[str] | None = None) -> int:
         from vision_ai.core.checks import run_checks
 
         return run_checks(camera, TrackerConfig())
-    if args.debug or args.cursor:
+    if args.debug or args.cursor or args.calibrate:
         return run_app(args, camera, control=args.cursor)
     parser.print_help()
     return 0

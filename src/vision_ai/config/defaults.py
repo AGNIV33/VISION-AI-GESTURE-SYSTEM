@@ -62,6 +62,8 @@ class GestureConfig:
 
     pinch_on: float = 0.30  # below this = pinched
     pinch_off: float = 0.42  # above this = released (gap avoids flicker)
+    mid_pinch_on: float = 0.30  # same, for thumb + middle finger (right click)
+    mid_pinch_off: float = 0.42
     arm_on: float = 0.50  # fingers getting close: freeze the cursor so the click lands still
     arm_off: float = 0.56
     arm_freeze_max_s: float = 0.25  # stop freezing if fingers hover close without pinching

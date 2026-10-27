@@ -74,8 +74,8 @@ class GestureRecognizer:
         # count how many pictures in a row each pinch has been on / off
         self._idx_on = self._idx_on + 1 if pose.pinch_index < c.pinch_on else 0
         self._idx_off = self._idx_off + 1 if pose.pinch_index > c.pinch_off else 0
-        self._mid_on = self._mid_on + 1 if pose.pinch_middle < c.pinch_on else 0
-        self._mid_off = self._mid_off + 1 if pose.pinch_middle > c.pinch_off else 0
+        self._mid_on = self._mid_on + 1 if pose.pinch_middle < c.mid_pinch_on else 0
+        self._mid_off = self._mid_off + 1 if pose.pinch_middle > c.mid_pinch_off else 0
         n = c.confirm_frames
         right_pinch = self._mid_on >= n and pose.pinch_index > c.pinch_off
 
