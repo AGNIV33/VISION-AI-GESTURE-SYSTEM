@@ -12,8 +12,8 @@ def make_hand(side="right", index_mcp=(0.5, 0.5), thumb_index_gap=0.10, palm=0.0
     world[LM.MIDDLE_MCP] = (0.0, -palm, 0.0)
     world[LM.THUMB_TIP] = (0.0, -0.1, 0.0)
     world[LM.INDEX_TIP] = (thumb_index_gap, -0.1, 0.0)
-    lm = np.zeros((21, 3), dtype=np.float32)
-    lm[LM.INDEX_MCP] = (index_mcp[0], index_mcp[1], 0.0)
+    # picture points: same shape as the world points, placed at index_mcp
+    lm = world + np.array([index_mcp[0], index_mcp[1], 0.0], dtype=np.float32)
     return Hand(side=side, landmarks=lm, world=world, score=0.99)
 
 

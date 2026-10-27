@@ -53,7 +53,12 @@ def run_calibration(pipeline: Pipeline, box) -> int:
 
     def show(label: str, vals: list[float]) -> None:
         if vals:
-            print(f"  {label}: lowest {min(vals):.2f}, highest {max(vals):.2f}")
+            s = sorted(vals)
+            p10, p90 = s[len(s) // 10], s[(len(s) * 9) // 10]
+            print(
+                f"  {label}: lowest {s[0]:.2f}, most between {p10:.2f}-{p90:.2f},"
+                f" highest {s[-1]:.2f}"
+            )
 
     show("open hand  (thumb-index)", open_idx)
     show("index pinch (thumb-index)", pinch_idx)

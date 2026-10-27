@@ -39,7 +39,7 @@ def find_model() -> Path | None:
     return None
 
 
-def result_to_hands(result) -> tuple[Hand, ...]:
+def result_to_hands(result, aspect: float = 1.0) -> tuple[Hand, ...]:
     """Convert a MediaPipe HandLandmarkerResult into our Hand objects.
 
     Tested on the owner's PC (2026-10-27): with our mirrored picture, MediaPipe's
@@ -53,7 +53,9 @@ def result_to_hands(result) -> tuple[Hand, ...]:
         )
         cat = result.handedness[i][0]
         side = "left" if cat.category_name.lower() == "right" else "right"
-        hands.append(Hand(side=side, landmarks=landmarks, world=world, score=float(cat.score)))
+        hands.append(
+            Hand(side=side, landmarks=landmarks, world=world, score=float(cat.score), aspect=aspect)
+        )
     return tuple(hands)
 
 
@@ -145,7 +147,7 @@ class TrackerThread(threading.Thread):
                     HandFrame(
                         t=frame.t,
                         done_t=done,
-                        hands=result_to_hands(result),
+                        hands=result_to_hands(result, rgb.shape[1] / rgb.shape[0]),
                         image=frame.image if self._keep_image else None,
                     )
                 )

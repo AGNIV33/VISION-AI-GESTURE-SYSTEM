@@ -26,6 +26,7 @@ class Hand:
     landmarks: np.ndarray  # (21, 3) image-normalized: x, y in 0..1 (mirrored view), z relative
     world: np.ndarray  # (21, 3) metres, origin near the hand centre
     score: float  # handedness confidence
+    aspect: float = 1.0  # picture width / height (x and y are scaled separately)
 
 
 @dataclass(frozen=True)
