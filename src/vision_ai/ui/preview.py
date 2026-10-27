@@ -106,6 +106,7 @@ def run_preview(
 
     start = time.monotonic()
     seq = 0
+    shown = False  # the window may report 'not visible' until the first picture is drawn
     cv2.namedWindow(WINDOW, cv2.WINDOW_AUTOSIZE)
     while True:
         got = pipeline.output.get(seq, timeout=0.1)
@@ -113,12 +114,13 @@ def run_preview(
             out, seq = got
             if out.frame.image is not None:
                 cv2.imshow(WINDOW, draw(out, pipeline, box, controlling))
+                shown = True
         key = cv2.waitKey(1) & 0xFF
         if key in (27, ord("q"), ord("Q")):
             return "closed by user"
         if key in (ord("p"), ord("P")) and controlling:
             pipeline.set_control_enabled(not pipeline.control_enabled)
-        if cv2.getWindowProperty(WINDOW, cv2.WND_PROP_VISIBLE) < 1:
+        if shown and cv2.getWindowProperty(WINDOW, cv2.WND_PROP_VISIBLE) < 1:
             return "window closed"
         err = pipeline.first_error()
         if err:
