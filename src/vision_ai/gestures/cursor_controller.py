@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from vision_ai.config.defaults import FILTER_UNITS, CursorConfig
-from vision_ai.core.types import LM, Hand, HandFrame
+from vision_ai.core.types import Hand, HandFrame, aim_point
 from vision_ai.gestures.cursor_mapper import CursorMapper, DeadZone
 from vision_ai.gestures.one_euro import OneEuroFilter2D
 
@@ -44,8 +44,8 @@ class CursorController:
         if self._last_seen is not None and frame.t - self._last_seen > self.cfg.lost_timeout_s:
             self.reset()  # hand came back after a gap: do not smooth from the old spot
         self._last_seen = frame.t
-        # Aim at the index-finger BASE: it hardly moves when you pinch with the fingertips.
-        x, y = float(hand.landmarks[LM.INDEX_MCP][0]), float(hand.landmarks[LM.INDEX_MCP][1])
+        # Aim at the middle of the knuckles: steadier than one point, ignores pinching.
+        x, y = aim_point(hand)
         u, v = self.mapper.to_unit(x, y)
         fu, fv = self._filter(u * FILTER_UNITS, v * FILTER_UNITS, frame.t)
         self.last_unit = (fu, fv)

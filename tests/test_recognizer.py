@@ -1,6 +1,6 @@
 from vision_ai.actions.dispatcher import Dispatcher
 from vision_ai.gestures.hand_pose import EXT, FOLD, HandPose
-from vision_ai.gestures.recognizer import DRAG, IDLE, SCROLL, GestureRecognizer
+from vision_ai.gestures.recognizer import DRAG, IDLE, SCROLL, ZOOM, GestureRecognizer
 
 OPEN = (EXT, EXT, EXT, EXT)
 FIST = (FOLD, FOLD, FOLD, FOLD)
@@ -166,6 +166,9 @@ class FakeBackend:
     def wheel(self, delta, horizontal=False):
         self.calls.append(("wheel", delta, horizontal))
 
+    def key(self, name, down):
+        self.calls.append(("key", name, down))
+
 
 def test_dispatcher_sends_clicks_drags_and_scrolls():
     b = FakeBackend()
@@ -195,3 +198,43 @@ def test_dispatcher_release_all_frees_a_stuck_button():
     d.release_all()
     d.release_all()  # second call does nothing
     assert b.calls == [("button", "left", True), ("button", "left", False)]
+
+
+def test_zoom_pose_zooms_with_hand_up_and_down():
+    run = Runner()
+    run.feed(pose(), frames=3)
+    run.feed(pose(idx=0.1, mid=0.1), pos=(500.0, 500.0), frames=6)
+    assert run.out.state == ZOOM and run.out.freeze
+    for i in range(1, 11):  # hand moves up 5 units per picture
+        run.feed(pose(idx=0.1, mid=0.1), pos=(500.0, 500.0 - 5 * i))
+    ups = [e[1] for e in run.events if e[0] == "zoom"]
+    assert ups and all(d > 0 for d in ups)
+    run.events.clear()
+    for i in range(1, 11):  # then down
+        run.feed(pose(idx=0.1, mid=0.1), pos=(500.0, 450.0 + 5 * i))
+    downs = [e[1] for e in run.events if e[0] == "zoom"]
+    assert downs and all(d < 0 for d in downs)
+
+
+def test_zoom_ends_when_fingers_open_and_no_click_after_real_zoom():
+    run = Runner()
+    run.feed(pose(idx=0.1, mid=0.1), frames=6)
+    for i in range(1, 30):
+        run.feed(pose(idx=0.1, mid=0.1), pos=(500.0, 500.0 - 5 * i))
+    run.feed(pose(), frames=5)
+    assert run.out.state == IDLE
+    assert ("click", "left") not in run.events
+
+
+def test_quick_pinch_with_middle_close_still_clicks():
+    run = Runner()
+    run.feed(pose(), frames=3)
+    run.feed(pose(idx=0.1, mid=0.1), frames=5)  # ~170 ms, no movement
+    run.feed(pose(), frames=4)
+    assert run.events == [("click", "left")]
+
+
+def test_dispatcher_zoom_is_ctrl_wheel_and_releases_ctrl():
+    b = FakeBackend()
+    Dispatcher(b, lambda: None).handle([("zoom", 40)], paused=False)
+    assert b.calls == [("key", "ctrl", True), ("wheel", 40, False), ("key", "ctrl", False)]

@@ -4,7 +4,7 @@ Each picture: pose + hand position in, gesture state + events out.
 
 Events:
     ("click", "left" | "right")   ("down", "left")   ("up", "left")
-    ("scroll", delta)   ("hscroll", delta)   (120 = one wheel notch)
+    ("scroll", delta)   ("hscroll", delta)   ("zoom", delta)   (120 = one wheel notch)
     ("toggle_pause",)
 """
 
@@ -22,6 +22,7 @@ PINCHED = "pinched"
 DRAG = "drag"
 RIGHT = "right click"
 SCROLL = "scroll"
+ZOOM = "zoom"
 FIST = "fist (hold to pause)"
 FIST_DONE = "fist"
 
@@ -52,12 +53,20 @@ class GestureRecognizer:
         self._pose_off = 0
         self._acc = [0.0, 0.0]
         self._snap = False
+        self._both = 0
+        self._zoomed = False
 
     def _go(self, state: str, t: float) -> None:
         self.state = state
         self._t_enter = t
         if state == IDLE:
             self._snap = False
+
+    def _start_zoom(self, pos: tuple[float, float], t: float) -> None:
+        self._go(ZOOM, t)
+        self._last_pos = pos
+        self._acc = [0.0, 0.0]
+        self._zoomed = False
 
     def update(
         self, pose: HandPose | None, pos: tuple[float, float] | None, t: float
@@ -77,6 +86,10 @@ class GestureRecognizer:
         self._mid_on = self._mid_on + 1 if pose.pinch_middle < c.mid_pinch_on else 0
         self._mid_off = self._mid_off + 1 if pose.pinch_middle > c.mid_pinch_off else 0
         n = c.confirm_frames
+        # zoom pose: thumb touching BOTH index and middle fingertips
+        both = pose.pinch_index < c.pinch_on and pose.pinch_middle < c.mid_pinch_on
+        self._both = self._both + 1 if both else 0
+        zoom_start = self._both >= c.zoom_confirm_frames
         right_pinch = self._mid_on >= n and pose.pinch_index > c.pinch_off
 
         s = self.state
@@ -88,6 +101,8 @@ class GestureRecognizer:
                 self._last_pos = pos
                 self._acc = [0.0, 0.0]
                 self._pose_off = 0
+            elif zoom_start:
+                self._start_zoom(pos, t)
             elif right_pinch:
                 self._go(RIGHT, t)
             elif pose.pinch_index < c.arm_on:
@@ -95,7 +110,9 @@ class GestureRecognizer:
                 self._snap = (t - self._last_click_t) < c.double_click_s
 
         elif s == ARMED:
-            if self._idx_on >= n:
+            if zoom_start:
+                self._start_zoom(pos, t)
+            elif self._idx_on >= n:
                 self._go(PINCHED, t)
                 self._down_t = t
                 self._pos0 = pos
@@ -105,7 +122,9 @@ class GestureRecognizer:
                 self._go(IDLE, t)
 
         elif s == PINCHED:
-            if self._idx_off >= n:
+            if zoom_start:  # a pinch that turns out to be the zoom pose (before any drag)
+                self._start_zoom(pos, t)
+            elif self._idx_off >= n:
                 if t - self._down_t <= c.tap_max_s:
                     events.append(("click", "left"))
                     self._last_click_t = t
@@ -143,6 +162,23 @@ class GestureRecognizer:
                         events.append((kind, whole))
                         self._acc[i] -= whole
 
+        elif s == ZOOM:
+            if self._idx_off >= c.pose_exit_frames or self._mid_off >= c.pose_exit_frames:
+                if not self._zoomed and t - self._t_enter <= c.tap_max_s:
+                    events.append(("click", "left"))  # it was only a tap: do not lose it
+                    self._last_click_t = t
+                self._go(IDLE, t)
+            elif self._last_pos is not None:
+                dy = pos[1] - self._last_pos[1]
+                self._last_pos = pos
+                if abs(dy) > c.scroll_deadband_units:
+                    self._acc[0] += -dy * c.zoom_gain  # hand up = zoom in
+                whole = int(self._acc[0])
+                if whole:
+                    events.append(("zoom", whole))
+                    self._acc[0] -= whole
+                    self._zoomed = True
+
         elif s == FIST:
             if not pose.is_fist:
                 self._go(IDLE, t)
@@ -155,7 +191,7 @@ class GestureRecognizer:
                 self._go(IDLE, t)
 
         st = self.state
-        freeze = st in (PINCHED, RIGHT, SCROLL, FIST, FIST_DONE) or (
+        freeze = st in (PINCHED, RIGHT, SCROLL, ZOOM, FIST, FIST_DONE) or (
             st == ARMED and t - self._t_enter < c.arm_freeze_max_s
         )
         return GestureOutput(

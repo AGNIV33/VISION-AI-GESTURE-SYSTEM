@@ -47,7 +47,7 @@ class CursorConfig:
     lost_timeout_s: float = 0.3  # no hand for this long -> forget the old position
     # High-rate cursor mover (runs faster than the camera).
     rate_hz: float = 120.0
-    smoother_tau_s: float = 0.025
+    smoother_tau_s: float = 0.012
     predict_gain: float = 0.5  # 0 = no prediction
     max_predict_s: float = 0.06
 
@@ -76,5 +76,7 @@ class GestureConfig:
     finger_folded: float = 1.10  # below this = curled
     scroll_gain: float = 1.8  # wheel units per box unit of hand movement (120 = one notch)
     scroll_deadband_units: float = 1.0  # ignore smaller moves per picture (noise)
+    zoom_gain: float = 2.4  # wheel units per box unit of hand movement (up = zoom in)
+    zoom_confirm_frames: int = 4  # thumb on index+middle this long before zoom starts
     pose_exit_frames: int = 3  # pose must be gone this many pictures to end scrolling
     fist_hold_s: float = 1.5  # hold a fist this long to pause / resume

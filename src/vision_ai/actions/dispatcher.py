@@ -12,6 +12,7 @@ log = logging.getLogger(__name__)
 class InputBackend(Protocol):
     def button(self, which: str, down: bool) -> None: ...
     def wheel(self, delta: int, horizontal: bool = False) -> None: ...
+    def key(self, name: str, down: bool) -> None: ...
 
 
 class WindowsBackend:
@@ -24,6 +25,11 @@ class WindowsBackend:
         from vision_ai.actions import win_input
 
         win_input.wheel(delta, horizontal)
+
+    def key(self, name: str, down: bool) -> None:
+        from vision_ai.actions import win_input
+
+        win_input.key(name, down)
 
 
 class Dispatcher:
@@ -51,6 +57,12 @@ class Dispatcher:
                     self.release_all()
                 elif kind == "scroll":
                     self._b.wheel(int(ev[1]))
+                elif kind == "zoom":  # Ctrl + wheel: zoom in browsers, Photos, Word, PDF...
+                    self._b.key("ctrl", True)
+                    try:
+                        self._b.wheel(int(ev[1]))
+                    finally:
+                        self._b.key("ctrl", False)
                 elif kind == "hscroll":
                     self._b.wheel(int(ev[1]), horizontal=True)
             except OSError as exc:

@@ -33,6 +33,7 @@ Update this file in the same commit as the work. Each phase ends with a demo che
 - [x] `cursor_mapper.py`: active box → screen (absolute mode)
 - [ ] Trackpad mode with acceleration
 - [x] Dead zone
+- [~] Aim at the middle of 4 knuckles (steadier) + shorter glide (tau 0.012). Needs owner's feel test
 - [~] High-rate cursor thread (~120 Hz) with light prediction (logic tested; feel needs the owner's PC)
 - [ ] **Checkpoint:** owner says the cursor feels smooth
 
@@ -43,6 +44,7 @@ Update this file in the same commit as the work. Each phase ends with a demo che
 - [~] Right click (thumb + middle)
 - [~] Drag (pinch + move, or pinch held 0.4 s)
 - [~] Scroll (two-finger pose, vertical + horizontal)
+- [~] One-hand zoom (thumb on index + middle fingertips, hand up/down = Ctrl+wheel). Quick tap there still clicks
 - [ ] Scroll inertia
 - [~] Pause / resume (fist held 1.5 s, or P in the preview)
 - [ ] Global pause hotkey (with the app shell, Phase 6)
@@ -52,7 +54,7 @@ Update this file in the same commit as the work. Each phase ends with a demo che
 
 ## Phase 4: Two-hand gestures
 - [ ] `win_touch.py`: touch injection (2 contacts)
-- [ ] Zoom (with Ctrl+wheel backup)
+- [ ] Two-hand zoom (touch injection); Ctrl+wheel one-hand zoom is in Phase 3
 - [ ] Rotate
 - [ ] Priority rules (two-hand beats one-hand)
 - [ ] **Checkpoint:** zoom works in Edge/Chrome and Photos

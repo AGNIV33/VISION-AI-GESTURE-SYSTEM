@@ -16,7 +16,9 @@ class LM:
     INDEX_TIP = 8
     MIDDLE_MCP = 9
     MIDDLE_TIP = 12
+    RING_MCP = 13
     RING_TIP = 16
+    PINKY_MCP = 17
     PINKY_TIP = 20
 
 
@@ -27,6 +29,16 @@ class Hand:
     world: np.ndarray  # (21, 3) metres, origin near the hand centre
     score: float  # handedness confidence
     aspect: float = 1.0  # picture width / height (x and y are scaled separately)
+
+
+PALM_POINTS = (LM.INDEX_MCP, LM.MIDDLE_MCP, LM.RING_MCP, LM.PINKY_MCP)
+
+
+def aim_point(hand: Hand) -> tuple[float, float]:
+    """Steady aim spot: the middle of the four knuckles. Averaging 4 points cancels most
+    of the random shake of a single point, and pinching does not move it."""
+    p = hand.landmarks[list(PALM_POINTS), :2].mean(axis=0)
+    return float(p[0]), float(p[1])
 
 
 @dataclass(frozen=True)

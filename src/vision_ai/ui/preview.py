@@ -7,7 +7,7 @@ import time
 import numpy as np
 
 from vision_ai.core.pipeline import EngineOutput, Pipeline
-from vision_ai.core.types import LM
+from vision_ai.core.types import LM, aim_point
 
 HAND_EDGES = (
     (0, 1),
@@ -102,7 +102,8 @@ def draw(
             cv2.line(image, pts[a], pts[b], (80, 220, 80), 2)
         for p in pts:
             cv2.circle(image, p, 3, (255, 255, 255), -1)
-        aim = pts[LM.INDEX_MCP]
+        ax, ay = aim_point(hand)
+        aim = (int(ax * w), int(ay * h))
         cv2.circle(image, aim, 8, (0, 140, 255), 2)
         cv2.putText(
             image,

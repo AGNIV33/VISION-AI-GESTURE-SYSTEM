@@ -132,3 +132,17 @@ def button(which: str, down: bool) -> None:
 def wheel(delta: int, horizontal: bool = False) -> None:
     """120 = one notch. Positive = up / right."""
     _send_mouse(MOUSEEVENTF_HWHEEL if horizontal else MOUSEEVENTF_WHEEL, data=delta)
+
+
+KEYEVENTF_KEYUP = 0x0002
+VK_CONTROL = 0x11
+_VK = {"ctrl": VK_CONTROL}
+
+
+def key(name: str, down: bool) -> None:
+    """Press or release a key (only 'ctrl' for now; used for Ctrl+wheel zoom)."""
+    inp = INPUT(type=1)  # INPUT_KEYBOARD
+    inp.ki = KEYBDINPUT(_VK[name], 0, 0 if down else KEYEVENTF_KEYUP, 0, 0)
+    sent = _api().SendInput(1, ctypes.byref(inp), ctypes.sizeof(INPUT))
+    if sent != 1:
+        raise OSError(f"SendInput failed (error {ctypes.get_last_error()})")
