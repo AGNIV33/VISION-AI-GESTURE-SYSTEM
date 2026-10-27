@@ -69,3 +69,11 @@ def test_result_to_hands_converts_arrays_and_side():
 def test_result_with_no_hands():
     empty = SimpleNamespace(hand_landmarks=[], hand_world_landmarks=[], handedness=[])
     assert result_to_hands(empty) == ()
+
+
+def test_prepare_image_shrinks_wide_pictures_and_keeps_shape():
+    from vision_ai.core.tracker import prepare_image
+
+    out = prepare_image(np.zeros((720, 1280, 3), np.uint8), 640)
+    assert out.shape == (360, 640, 3)
+    assert prepare_image(np.zeros((480, 640, 3), np.uint8), 640).shape == (480, 640, 3)

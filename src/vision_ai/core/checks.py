@@ -70,7 +70,7 @@ def run_checks(camera: CameraConfig, tracker: TrackerConfig) -> int:
         _line(FAIL, "Libraries", f"{exc}  -> run: pip install -e .")
         return 1
 
-    from vision_ai.core.tracker import create_landmarker, find_model
+    from vision_ai.core.tracker import create_landmarker, find_model, prepare_image
 
     model = find_model()
     if model is None:
@@ -138,8 +138,7 @@ def run_checks(camera: CameraConfig, tracker: TrackerConfig) -> int:
                     ok, img = cap.read()
                     if not ok:
                         continue
-                    img = cv2.flip(img, 1)
-                    rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                    rgb = prepare_image(cv2.flip(img, 1), tracker.input_width)
                     ts = max(int(time.monotonic() * 1000), last_ts + 1)
                     last_ts = ts
                     a = time.monotonic()

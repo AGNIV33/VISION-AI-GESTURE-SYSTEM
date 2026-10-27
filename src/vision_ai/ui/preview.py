@@ -33,6 +33,8 @@ HAND_EDGES = (
     (0, 17),
 )
 
+PREVIEW_WIDTH = 640
+
 WINDOW = "Vision AI debug  (Esc/Q = quit, P = pause/resume mouse control)"
 
 
@@ -44,8 +46,14 @@ def draw(
 ) -> np.ndarray:
     import cv2
 
-    image = out.frame.image.copy()
+    image = out.frame.image
     h, w = image.shape[:2]
+    if w > PREVIEW_WIDTH:  # a smaller window is much cheaper to draw
+        h = round(h * PREVIEW_WIDTH / w)
+        w = PREVIEW_WIDTH
+        image = cv2.resize(image, (w, h), interpolation=cv2.INTER_AREA)
+    else:
+        image = image.copy()
 
     bx, by, bw, bh = box
     cv2.rectangle(

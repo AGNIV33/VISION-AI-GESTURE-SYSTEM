@@ -24,6 +24,9 @@ class TrackerConfig:
     min_detection_confidence: float = 0.5
     min_presence_confidence: float = 0.5
     min_tracking_confidence: float = 0.5
+    # Pictures wider than this are shrunk before tracking. MediaPipe shrinks them
+    # internally anyway, so this only removes wasted work.
+    input_width: int = 640
 
 
 @dataclass

@@ -57,6 +57,18 @@ def result_to_hands(result) -> tuple[Hand, ...]:
     return tuple(hands)
 
 
+def prepare_image(image: np.ndarray, max_width: int) -> np.ndarray:
+    """Shrink (keeping the shape) and convert BGR -> RGB for MediaPipe."""
+    import cv2
+
+    h, w = image.shape[:2]
+    if max_width and w > max_width:
+        image = cv2.resize(
+            image, (max_width, round(h * max_width / w)), interpolation=cv2.INTER_AREA
+        )
+    return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+
 def create_landmarker(model_path: Path, cfg: TrackerConfig):
     """Build a MediaPipe HandLandmarker in VIDEO mode (use as a context manager)."""
     from mediapipe.tasks.python import vision
@@ -106,7 +118,6 @@ class TrackerThread(threading.Thread):
             self._out.close()
 
     def _loop(self) -> None:
-        import cv2
         import mediapipe as mp
 
         last_ts = -1
@@ -119,7 +130,7 @@ class TrackerThread(threading.Thread):
                         break
                     continue
                 frame, seq = got
-                rgb = cv2.cvtColor(frame.image, cv2.COLOR_BGR2RGB)
+                rgb = prepare_image(frame.image, self._cfg.input_width)
                 mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
                 ts = int(frame.t * 1000)
                 if ts <= last_ts:  # MediaPipe needs strictly increasing timestamps
