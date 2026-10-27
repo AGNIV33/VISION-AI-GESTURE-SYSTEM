@@ -13,8 +13,9 @@ class CameraConfig:
     width: int = 640
     height: int = 480
     fps: int = 30
-    # "dshow" opens fast on Windows; "msmf" is the alternative; "auto" lets OpenCV choose.
-    backend: str = "dshow" if sys.platform == "win32" else "auto"
+    # "msmf" gave 32 fps on the owner's PC vs 9.8 fps with "dshow" (2026-10-27).
+    # If msmf cannot open the camera, open_camera falls back to dshow.
+    backend: str = "msmf" if sys.platform == "win32" else "auto"
     mirror: bool = True  # mirrored view: moving your hand right moves the cursor right
 
 
