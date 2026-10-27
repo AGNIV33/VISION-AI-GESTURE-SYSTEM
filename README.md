@@ -5,7 +5,11 @@ Docs are in [`docs/`](docs/): start with [`plan.md`](docs/plan.md).
 
 **Status:** Phases 0-2 written (tracking + smooth cursor). Needs testing on a Windows PC.
 
-## Setup (Windows, PowerShell)
+## Easiest way (Windows)
+
+Double-click `setup.bat` once, then `run_debug.bat` or `run_cursor.bat`.
+
+## Setup by hand (Windows, PowerShell)
 
 ```powershell
 cd "$HOME\Desktop\VISION AI"
