@@ -1,38 +1,38 @@
 # TASKS: Vision AI Gesture System
 
-**How to use:** `[ ]` = to do, `[~]` = in progress, `[x]` = done.
+**How to use:** `[ ]` = to do, `[~]` = written but NOT yet tested on the owner's Windows PC, `[x]` = done and tested.
 Update this file in the same commit as the work. Each phase ends with a demo checkpoint for the owner.
 
 ---
 
 ## Phase 0: Setup
 - [x] Write docs (plan, PRD, architecture, DESIGN, AGENTS, CLAUDE, TASKS)
-- [ ] Owner reviews docs and answers open questions
-- [ ] Create `pyproject.toml` (Python 3.12, pinned versions)
-- [ ] Create the folder structure from architecture.md
-- [ ] Add `.gitignore`, `README.md` with setup steps
-- [ ] Download `hand_landmarker.task` into `assets/models/`
-- [ ] Add `python -m vision_ai --check` (camera + MediaPipe check)
-- [ ] Add a logging setup
+- [x] Owner reviews docs (approved; open questions still listed in plan.md section 5)
+- [x] Create `pyproject.toml` (Python 3.10+, version ranges; pin exact versions before release)
+- [x] Create the folder structure from architecture.md
+- [x] Add `.gitignore`, `README.md` with setup steps
+- [~] Download `hand_landmarker.task` into `assets/models/` (script `scripts/download_model.py`; owner runs it)
+- [~] Add `python -m vision_ai --check` (camera + MediaPipe check)
+- [x] Add a logging setup (basic; file logging comes with the app shell)
 - [ ] **Checkpoint:** owner runs `--check` on Windows → all OK
 
 ## Phase 1: Tracking
-- [ ] `CaptureThread` with newest-frame queue (size 1), 640x480
-- [ ] `TrackerThread` with MediaPipe Hand Landmarker (VIDEO mode, 2 hands)
-- [ ] `HandFrame` / `Hand` data classes
-- [ ] Debug preview window: hand points, fps, delay
+- [~] `CaptureThread` with newest-frame slot, 640x480
+- [~] `TrackerThread` with MediaPipe Hand Landmarker (VIDEO mode, 2 hands)
+- [x] `HandFrame` / `Hand` data classes
+- [~] Debug preview window: hand points, fps, delay
 - [ ] `tools/record_landmarks.py` to save hand data for tests
 - [ ] **Checkpoint:** preview at 30 fps or more on the owner's PC
 
 ## Phase 2: Smooth cursor
-- [ ] DPI awareness (per-monitor v2)
-- [ ] `win_input.py`: absolute move on the virtual desktop
-- [ ] One Euro Filter + unit tests
-- [ ] Hand-size scaling in `features.py`
-- [ ] `cursor_mapper.py`: active box → screen (absolute mode)
+- [~] DPI awareness (per-monitor v2)
+- [~] `win_input.py`: absolute move on the virtual desktop (also click and wheel helpers, unused until Phase 3)
+- [x] One Euro Filter + unit tests (default values are untuned)
+- [x] Hand-size scaling in `features.py`
+- [x] `cursor_mapper.py`: active box → screen (absolute mode)
 - [ ] Trackpad mode with acceleration
-- [ ] Dead zone
-- [ ] High-rate cursor thread (~120 Hz) with light prediction
+- [x] Dead zone
+- [~] High-rate cursor thread (~120 Hz) with light prediction (logic tested; feel needs the owner's PC)
 - [ ] **Checkpoint:** owner says the cursor feels smooth
 
 ## Phase 3: Core gestures

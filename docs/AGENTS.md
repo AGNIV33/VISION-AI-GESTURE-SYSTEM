@@ -13,7 +13,7 @@ Work only on the **current phase** in TASKS.md unless the owner says otherwise.
 
 ## 2. Project facts
 - Windows 10/11 desktop app, Python 3.12 (64-bit).
-- Main libraries: `mediapipe`, `opencv-python`, `PySide6`, `numpy`, `pydantic`.
+- Main libraries: `mediapipe`, `opencv-contrib-python` (MediaPipe requires it; never also install `opencv-python`), `numpy`. Added later: `PySide6`, `pydantic` (Phase 6).
 - Windows APIs via `ctypes` only (no `pyautogui`, no `pywin32` unless agreed).
 - Source code lives in `src/vision_ai/`. Tests in `tests/`.
 
@@ -61,6 +61,7 @@ mypy src
 - Never commit: `.venv/`, build output, `*.exe`, license secrets, API keys.
 
 ## 7. Do not
+- Never name a Thread attribute `_stop` (it breaks `Thread.join`); use `_stop_evt`.
 - Don't add new big dependencies without asking the owner.
 - Don't change gesture defaults without saying why in the commit.
 - Don't add telemetry or any network calls (except licensing, Phase 9).

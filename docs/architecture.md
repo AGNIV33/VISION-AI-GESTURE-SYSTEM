@@ -11,7 +11,7 @@
 |---|---|---|
 | Language | Python 3.12 (64-bit) | Confirm the MediaPipe wheel for this version in Phase 0 |
 | Hand tracking | MediaPipe Tasks: Hand Landmarker (`hand_landmarker.task`) | Apache 2.0, commercial use allowed. Use only the official Google model. |
-| Camera | OpenCV (`cv2.VideoCapture`, MSMF/DirectShow backend) | 640x480 is enough for tracking and is fast |
+| Camera | OpenCV (`opencv-contrib-python`, the package MediaPipe already requires; DirectShow default, MSMF fallback) | 640x480 is enough for tracking and is fast |
 | UI + tray | PySide6 (Qt 6) | `QSystemTrayIcon`, settings window, overlay |
 | Mouse / keyboard | Win32 `SendInput` via `ctypes` | Absolute coordinates on the virtual desktop |
 | Zoom / rotate | Win32 touch injection (`InitializeTouchInjection`, `InjectTouchInput`) via `ctypes` | Real two-finger gestures; Ctrl+wheel backup |
@@ -64,19 +64,23 @@ vision-ai-gesture-system/
 │   ├── __main__.py            # Entry point: python -m vision_ai
 │   ├── app.py                 # Builds and wires everything together
 │   ├── core/
+│   │   ├── types.py           # Hand, HandFrame, Frame, landmark indices
+│   │   ├── slot.py            # LatestSlot (newest-item mailbox), RateMeter
 │   │   ├── capture.py         # CaptureThread
-│   │   ├── tracker.py         # TrackerThread + HandFrame data class
-│   │   └── pipeline.py        # Starts/stops threads, pause/resume
+│   │   ├── tracker.py         # TrackerThread (MediaPipe)
+│   │   ├── pipeline.py        # EngineThread + Pipeline: starts/stops threads, pause/resume
+│   │   └── checks.py          # python -m vision_ai --check
 │   ├── gestures/
 │   │   ├── one_euro.py        # One Euro Filter
 │   │   ├── features.py        # Pinch distance, finger states, palm facing, scaled by hand size
 │   │   ├── recognizer.py      # Runs all gesture state machines
-│   │   ├── cursor_mapper.py   # Active box → screen, absolute + trackpad modes
+│   │   ├── cursor_mapper.py   # Active box → screen, dead zone (trackpad mode: later)
+│   │   ├── cursor_controller.py # Hand → filtered screen position
 │   │   └── definitions/       # One file per gesture (tap.py, drag.py, scroll.py, zoom.py, ...)
 │   ├── actions/
 │   │   ├── win_input.py       # SendInput wrappers (move, click, wheel, keys)
 │   │   ├── win_touch.py       # Touch injection (zoom, rotate)
-│   │   ├── cursor_thread.py   # High-rate smooth cursor mover
+│   │   ├── cursor_thread.py   # CursorSmoother (pure logic) + high-rate CursorThread
 │   │   └── dispatcher.py      # GestureEvent → Windows action
 │   ├── ui/
 │   │   ├── tray.py

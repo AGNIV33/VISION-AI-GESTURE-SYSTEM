@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+*.exe
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+# Model is downloaded by scripts/download_model.py
+assets/models/*.task
+# Local recordings and secrets
+recordings/
+*.key
+.env
