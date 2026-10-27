@@ -84,7 +84,7 @@ Update this file in the same commit as the work. Each phase ends with a demo che
 ## Phase 8: Packaging
 - [ ] `scripts/build.ps1` (Nuitka standalone)
 - [ ] `installer/vision_ai.iss` (Inno Setup)
-- [ ] App icon + version info
+- [~] App icon + version info (icon done: `assets/icons/app.ico`; version info later)
 - [ ] Test on a clean Windows PC / VM
 
 ## Phase 9: Licensing
