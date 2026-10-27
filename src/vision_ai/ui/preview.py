@@ -120,7 +120,12 @@ def draw(
         f"delay camera->tracked {out.frame.latency_s * 1000:4.0f} ms"
         f"   inference {pipeline.tracker.infer_ms:4.1f} ms",
         f"hands: {len(out.frame.hands)}"
-        + (f"   pinch(thumb-index): {out.pinch:.2f}" if out.pinch is not None else ""),
+        + (
+            f"   pinch index {out.pose.pinch_index:.2f}  middle {out.pose.pinch_middle:.2f}"
+            if out.pose is not None
+            else ""
+        ),
+        f"gesture: {out.gesture.upper()}" if out.gesture else "",
     ]
     if controlling:
         lines.append("MOUSE CONTROL: ON" if pipeline.control_enabled else "MOUSE CONTROL: PAUSED")

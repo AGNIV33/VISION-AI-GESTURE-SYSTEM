@@ -53,3 +53,26 @@ class CursorConfig:
 
 
 FILTER_UNITS = 1000.0
+
+
+@dataclass
+class GestureConfig:
+    """Pinch numbers are thumb-to-finger distance divided by palm size (0 = touching).
+    Starting values: tune with the pinch numbers shown in the preview."""
+
+    pinch_on: float = 0.30  # below this = pinched
+    pinch_off: float = 0.42  # above this = released (gap avoids flicker)
+    arm_on: float = 0.50  # fingers getting close: freeze the cursor so the click lands still
+    arm_off: float = 0.56
+    arm_freeze_max_s: float = 0.25  # stop freezing if fingers hover close without pinching
+    confirm_frames: int = 2  # a pinch/release must last this many pictures to count
+    tap_max_s: float = 0.35  # pinch shorter than this = click
+    drag_start_units: float = 30.0  # move this far while pinched = drag (box units, 1000 = box)
+    drag_hold_s: float = 0.40  # or hold the pinch this long = drag
+    double_click_s: float = 0.50  # second tap this soon lands on the first tap's spot
+    finger_extended: float = 1.30  # tip-to-wrist / middle-joint-to-wrist above this = straight
+    finger_folded: float = 1.10  # below this = curled
+    scroll_gain: float = 1.8  # wheel units per box unit of hand movement (120 = one notch)
+    scroll_deadband_units: float = 1.0  # ignore smaller moves per picture (noise)
+    pose_exit_frames: int = 3  # pose must be gone this many pictures to end scrolling
+    fist_hold_s: float = 1.5  # hold a fist this long to pause / resume

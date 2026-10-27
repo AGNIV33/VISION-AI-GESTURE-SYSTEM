@@ -9,12 +9,15 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from vision_ai.actions.cursor_thread import CursorThread
+from vision_ai.actions.dispatcher import Dispatcher
 from vision_ai.config.defaults import CameraConfig, CursorConfig, TrackerConfig
 from vision_ai.core.capture import CaptureThread
 from vision_ai.core.slot import LatestSlot, RateMeter
 from vision_ai.core.tracker import TrackerThread
 from vision_ai.core.types import Frame, HandFrame
 from vision_ai.gestures.cursor_controller import CursorController
+from vision_ai.gestures.hand_pose import HandPose, read_pose
+from vision_ai.gestures.recognizer import GestureRecognizer
 
 log = logging.getLogger(__name__)
 
@@ -24,8 +27,9 @@ class EngineOutput:
     """What the preview window needs to draw."""
 
     frame: HandFrame
-    aim: tuple[float, float] | None  # screen position the engine wants (pixels)
-    pinch: float | None  # thumb-index pinch ratio of the active hand
+    aim: tuple[float, float] | None  # screen position the cursor is sent to (pixels)
+    pose: HandPose | None  # pinch numbers and finger states of the active hand
+    gesture: str = ""  # current gesture state, e.g. "move", "drag"
 
 
 class EngineThread(threading.Thread):
@@ -35,22 +39,27 @@ class EngineThread(threading.Thread):
         out: LatestSlot[EngineOutput],
         controller: CursorController | None,
         cursor: CursorThread | None,
+        recognizer: GestureRecognizer | None = None,
+        dispatcher: Dispatcher | None = None,
     ) -> None:
         super().__init__(name="engine", daemon=True)
         self._in = hands
         self._out = out
         self._controller = controller
         self._cursor = cursor
+        self._recognizer = recognizer
+        self._dispatcher = dispatcher
         self._stop_evt = threading.Event()
         self.fps = RateMeter()
         self.control_enabled = True
+        self._frozen: tuple[float, float] | None = None
+        self._last_target: tuple[float, float] | None = None
+        self._last_click_pos: tuple[float, float] | None = None
 
     def stop(self) -> None:
         self._stop_evt.set()
 
     def run(self) -> None:
-        from vision_ai.gestures.features import pinch_ratio
-
         seq = 0
         was_enabled = True
         try:
@@ -62,22 +71,45 @@ class EngineThread(threading.Thread):
                     continue
                 frame, seq = got
                 self.fps.tick()
-                aim = None
-                pinch = None
-                if self._controller is not None:
-                    hand = self._controller.pick_hand(frame)
-                    if hand is not None:
-                        pinch = pinch_ratio(hand)
-                    if self.control_enabled:
-                        if not was_enabled:
-                            self._controller.reset()
-                        aim = self._controller.update(frame)
-                        if aim is not None and self._cursor is not None:
-                            self._cursor.set_target(aim[0], aim[1], frame.t)
-                    was_enabled = self.control_enabled
-                self._out.put(EngineOutput(frame=frame, aim=aim, pinch=pinch))
+                self._out.put(self._process(frame, was_enabled))
+                was_enabled = self.control_enabled
         finally:
+            if self._dispatcher is not None:
+                self._dispatcher.release_all()
             self._out.close()
+
+    def _process(self, frame: HandFrame, was_enabled: bool) -> EngineOutput:
+        ctrl = self._controller
+        if ctrl is None:
+            return EngineOutput(frame=frame, aim=None, pose=None)
+        if self.control_enabled and not was_enabled:
+            ctrl.reset()
+        hand = ctrl.pick_hand(frame)
+        aim = ctrl.update(frame)
+        pose = read_pose(hand, self._recognizer.cfg) if (hand and self._recognizer) else None
+
+        g = None
+        if self._recognizer is not None:
+            g = self._recognizer.update(pose, ctrl.last_unit if hand else None, frame.t)
+            if self._dispatcher is not None and g.events:
+                self._dispatcher.handle(g.events, paused=not self.control_enabled)
+                if any(e[0] == "click" for e in g.events):
+                    self._last_click_pos = self._frozen or self._last_target
+
+        target = aim
+        if aim is not None and g is not None and g.freeze:
+            if self._frozen is None:
+                snap = g.snap_to_last_click and self._last_click_pos is not None
+                self._frozen = self._last_click_pos if snap else (self._last_target or aim)
+            target = self._frozen
+        else:
+            self._frozen = None
+
+        if target is not None and self.control_enabled:
+            self._last_target = target
+            if self._cursor is not None:
+                self._cursor.set_target(target[0], target[1], frame.t)
+        return EngineOutput(frame=frame, aim=target, pose=pose, gesture=g.state if g else "")
 
 
 class Pipeline:
@@ -91,6 +123,8 @@ class Pipeline:
         model_path: Path,
         controller: CursorController | None = None,
         mover: Callable[[int, int], None] | None = None,
+        recognizer: GestureRecognizer | None = None,
+        dispatcher: Dispatcher | None = None,
     ) -> None:
         self.frames: LatestSlot[Frame] = LatestSlot()
         self.hands: LatestSlot[HandFrame] = LatestSlot()
@@ -99,7 +133,11 @@ class Pipeline:
         self.tracker = TrackerThread(self.frames, self.hands, model_path, tracker)
         self.controller = controller
         self.cursor = CursorThread(mover, cursor_cfg) if mover is not None else None
-        self.engine = EngineThread(self.hands, self.output, controller, self.cursor)
+        self.recognizer = recognizer
+        self.dispatcher = dispatcher
+        self.engine = EngineThread(
+            self.hands, self.output, controller, self.cursor, recognizer, dispatcher
+        )
 
     def start(self) -> None:
         if self.cursor is not None:
@@ -109,6 +147,8 @@ class Pipeline:
         self.capture.start()
 
     def stop(self) -> None:
+        if self.dispatcher is not None:
+            self.dispatcher.release_all()
         for t in (self.capture, self.tracker, self.engine, self.cursor):
             if t is not None:
                 t.stop()
@@ -117,6 +157,8 @@ class Pipeline:
                 t.join(timeout=2.0)
 
     def set_control_enabled(self, enabled: bool) -> None:
+        if not enabled and self.dispatcher is not None:
+            self.dispatcher.release_all()
         self.engine.control_enabled = enabled
         if self.cursor is not None:
             self.cursor.enabled = enabled

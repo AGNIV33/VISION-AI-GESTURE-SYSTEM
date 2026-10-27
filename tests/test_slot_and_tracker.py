@@ -59,8 +59,11 @@ def _fake_result(label="Right"):
     )
 
 
-def test_result_to_hands_converts_arrays_and_side():
+def test_result_to_hands_converts_arrays_and_swaps_side():
+    # MediaPipe's label is the opposite of the user's real hand in our mirrored picture
     (hand,) = result_to_hands(_fake_result("Left"))
+    assert hand.side == "right"
+    (hand,) = result_to_hands(_fake_result("Right"))
     assert hand.side == "left"
     assert hand.landmarks.shape == (21, 3) and hand.world.shape == (21, 3)
     assert hand.landmarks.dtype == np.float32

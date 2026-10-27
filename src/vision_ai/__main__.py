@@ -40,30 +40,43 @@ def run_app(args: argparse.Namespace, camera: CameraConfig, control: bool) -> in
         return 2
 
     from vision_ai.actions import win_input
+    from vision_ai.actions.dispatcher import Dispatcher, WindowsBackend
     from vision_ai.core.pipeline import Pipeline
     from vision_ai.gestures.cursor_controller import CursorController
     from vision_ai.gestures.cursor_mapper import CursorMapper, Rect
+    from vision_ai.gestures.recognizer import GestureRecognizer
     from vision_ai.platform.dpi import enable_dpi_awareness
     from vision_ai.ui.preview import run_preview
 
     cursor_cfg = replace(CursorConfig(), main_hand=args.main_hand)
-    controller = mover = None
+    recognizer = GestureRecognizer()
+    dispatcher = mover = None
+    pipe_ref: list = []
+    enable_dpi_awareness()
     if control:
         if sys.platform != "win32":
             print("Mouse control only works on Windows. Use --debug here.")
             return 2
-        enable_dpi_awareness()
         screen = win_input.virtual_screen_rect()
-        controller = CursorController(CursorMapper(Rect(*cursor_cfg.box), screen), cursor_cfg)
 
         def mover(x: int, y: int) -> None:
             win_input.move_abs(x, y, screen)
 
+        def toggle_pause() -> None:
+            p = pipe_ref[0]
+            p.set_control_enabled(not p.control_enabled)
+            print("Paused (make a fist again to resume)" if not p.control_enabled else "Resumed")
+
+        dispatcher = Dispatcher(WindowsBackend(), toggle_pause)
     else:
-        enable_dpi_awareness()
+        screen = Rect(0, 0, 1920, 1080)  # --debug: gestures are shown, nothing is clicked
+    controller = CursorController(CursorMapper(Rect(*cursor_cfg.box), screen), cursor_cfg)
 
     tracker_cfg = replace(TrackerConfig(), num_hands=args.hands)
-    pipe = Pipeline(camera, tracker_cfg, cursor_cfg, model, controller, mover)
+    pipe = Pipeline(
+        camera, tracker_cfg, cursor_cfg, model, controller, mover, recognizer, dispatcher
+    )
+    pipe_ref.append(pipe)
     pipe.start()
     try:
         pipe.capture.opened.wait(timeout=15)

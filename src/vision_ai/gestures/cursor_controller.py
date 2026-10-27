@@ -15,6 +15,8 @@ class CursorController:
         self._filter = OneEuroFilter2D(cfg.min_cutoff, cfg.beta, cfg.d_cutoff)
         self._dead = DeadZone(cfg.dead_zone_px)
         self._last_seen: float | None = None
+        # filtered hand position inside the active box, 0..1000 (used by gestures)
+        self.last_unit: tuple[float, float] | None = None
 
     def tune(self, min_cutoff: float | None = None, beta: float | None = None) -> None:
         """Change smoothing while running. Lower min_cutoff = steadier but slower;
@@ -46,5 +48,6 @@ class CursorController:
         x, y = float(hand.landmarks[LM.INDEX_MCP][0]), float(hand.landmarks[LM.INDEX_MCP][1])
         u, v = self.mapper.to_unit(x, y)
         fu, fv = self._filter(u * FILTER_UNITS, v * FILTER_UNITS, frame.t)
+        self.last_unit = (fu, fv)
         sx, sy = self.mapper.unit_to_screen(fu / FILTER_UNITS, fv / FILTER_UNITS)
         return self._dead(sx, sy)

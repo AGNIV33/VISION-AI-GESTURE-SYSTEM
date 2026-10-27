@@ -34,15 +34,17 @@ MediaPipe gives 21 points per hand. The important ones:
 
 **Hand size** = distance from 0 to 9. All distances are divided by it.
 
+**Left/right labels:** with our mirrored picture, MediaPipe's label is the opposite of the user's real hand (owner's test), so the app swaps it.
+
 ### 1.3 Gesture specs (starting values, tuned later)
 
 | Gesture | Starts when | Ends when | Notes |
 |---|---|---|---|
 | **Move** | One hand visible, not pinched | No hand for 300 ms | Cursor follows the filtered index base (ID 5) |
-| **Tap** | Pinch (4↔8) < 0.25 for ≥ 2 frames | Pinch > 0.35 within 300 ms and moved < 0.03 | Cursor is frozen from the pinch start until release |
+| **Tap** | Pinch (4↔8) < 0.30 for ≥ 2 frames | Pinch > 0.42 within 350 ms | Cursor freezes when fingers get close (< 0.50) and stays still until release |
 | **Double tap** | Second tap within 400 ms of the first | — | Sends a real double-click |
-| **Drag** | Pinch held and hand moved > 0.03, or held > 350 ms | Pinch > 0.35 | Mouse button stays down while dragging |
-| **Right click** | Pinch (4↔12) < 0.25, index NOT pinched | Release | Separate from the index pinch |
+| **Drag** | Pinch held and hand moved > 30 box units (of 1000), or held > 400 ms | Pinch > 0.42 | Mouse button stays down while dragging; released if the hand is lost |
+| **Right click** | Pinch (4↔12) < 0.30, index NOT pinched (> 0.42) | Release | Separate from the index pinch |
 | **Scroll** | Index and middle fingers up together, others folded ("two-finger pose") | Pose ends | Hand move up/down/left/right = scroll; release with speed = inertia scroll |
 | **Zoom** | Both hands pinched | Either hand releases | Distance change between hands = zoom amount |
 | **Rotate** | Both hands pinched | Either hand releases | Angle change of the line between hands = rotation |

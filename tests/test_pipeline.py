@@ -34,7 +34,7 @@ def test_engine_sends_target_to_cursor_and_output_to_preview():
         got = out.get(0, timeout=1.0)
         assert got is not None
         result: EngineOutput = got[0]
-        assert result.aim is not None and result.pinch is not None
+        assert result.aim is not None
         assert len(cursor.targets) == 1
     finally:
         eng.stop()
@@ -68,3 +68,46 @@ def test_pipeline_starts_and_stops_cleanly_without_camera_or_model(tmp_path):
     pipe.stop()
     assert time.monotonic() - t0 < 5
     assert pipe.first_error()  # tells the user what went wrong
+
+
+def test_engine_freezes_cursor_during_pinch_and_sends_one_click():
+    from vision_ai.actions.dispatcher import Dispatcher
+    from vision_ai.gestures.recognizer import GestureRecognizer
+
+    class FakeBackend:
+        def __init__(self):
+            self.calls = []
+
+        def button(self, which, down):
+            self.calls.append((which, down))
+
+        def wheel(self, delta, horizontal=False):
+            self.calls.append(("wheel", delta))
+
+    cfg = CursorConfig()
+    ctrl = CursorController(CursorMapper(Rect(*cfg.box), Rect(0, 0, 1920, 1080)), cfg)
+    backend = FakeBackend()
+    cursor = FakeCursor()
+    eng = EngineThread(
+        LatestSlot(),
+        LatestSlot(),
+        ctrl,
+        cursor,
+        GestureRecognizer(),
+        Dispatcher(backend, lambda: None),
+    )
+    t = 0.0
+    for _ in range(5):  # open hand at the centre
+        t += 1 / 30
+        eng._process(make_frame(t, [make_hand(index_mcp=(0.5, 0.55), thumb_index_gap=0.10)]), True)
+    before = cursor.targets[-1][:2]
+    for _ in range(4):  # pinch; the knuckle wobbles a little while pinching
+        t += 1 / 30
+        eng._process(
+            make_frame(t, [make_hand(index_mcp=(0.51, 0.56), thumb_index_gap=0.005)]), True
+        )
+    assert cursor.targets[-1][:2] == before  # cursor held still
+    for _ in range(3):  # release
+        t += 1 / 30
+        eng._process(make_frame(t, [make_hand(index_mcp=(0.51, 0.56), thumb_index_gap=0.10)]), True)
+    assert backend.calls == [("left", True), ("left", False)]

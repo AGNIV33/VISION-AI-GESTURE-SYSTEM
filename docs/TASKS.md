@@ -11,18 +11,19 @@ Update this file in the same commit as the work. Each phase ends with a demo che
 - [x] Create `pyproject.toml` (Python 3.10+, version ranges; pin exact versions before release)
 - [x] Create the folder structure from architecture.md
 - [x] Add `.gitignore`, `README.md` with setup steps
-- [~] Download `hand_landmarker.task` into `assets/models/` (script `scripts/download_model.py`; owner runs it)
-- [~] Add `python -m vision_ai --check` (camera + MediaPipe check)
+- [x] Download `hand_landmarker.task` into `assets/models/` (script `scripts/download_model.py`)
+- [x] Add `python -m vision_ai --check` (camera + MediaPipe check)
 - [x] Add a logging setup (basic; file logging comes with the app shell)
-- [ ] **Checkpoint:** owner runs `--check` on Windows → all OK
+- [x] **Checkpoint:** owner runs `--check` on Windows → all OK
 
 ## Phase 1: Tracking
 - [~] `CaptureThread` with newest-frame slot, 640x480
-- [~] `TrackerThread` with MediaPipe Hand Landmarker (VIDEO mode, 2 hands)
+- [x] `TrackerThread` with MediaPipe Hand Landmarker (VIDEO mode; 1 hand by default, 30 fps on owner's PC)
+- [x] Fix swapped left/right labels (owner's test)
 - [x] `HandFrame` / `Hand` data classes
-- [~] Debug preview window: hand points, fps, delay
+- [x] Debug preview window: hand points, fps, delay, speed summary
 - [ ] `tools/record_landmarks.py` to save hand data for tests
-- [ ] **Checkpoint:** preview at 30 fps or more on the owner's PC
+- [x] **Checkpoint:** preview at 30 fps or more on the owner's PC (30.1 fps, 14-18 ms delay)
 
 ## Phase 2: Smooth cursor
 - [~] DPI awareness (per-monitor v2)
@@ -36,14 +37,17 @@ Update this file in the same commit as the work. Each phase ends with a demo che
 - [ ] **Checkpoint:** owner says the cursor feels smooth
 
 ## Phase 3: Core gestures
-- [ ] Gesture state machine base class
-- [ ] Tap (with cursor freeze on pinch start)
-- [ ] Double tap
-- [ ] Right click (thumb + middle)
-- [ ] Drag
-- [ ] Scroll (two-finger pose) with inertia
-- [ ] Pause / resume (fist hold) + global hotkey
-- [ ] Tests with recorded landmark data for each gesture
+- [~] Gesture state machine (`gestures/recognizer.py`, `hand_pose.py`, `actions/dispatcher.py`)
+- [~] Tap (with cursor freeze on pinch start)
+- [~] Double tap (second tap snaps to the first tap's spot; Windows turns two clicks into a double-click)
+- [~] Right click (thumb + middle)
+- [~] Drag (pinch + move, or pinch held 0.4 s)
+- [~] Scroll (two-finger pose, vertical + horizontal)
+- [ ] Scroll inertia
+- [~] Pause / resume (fist held 1.5 s, or P in the preview)
+- [ ] Global pause hotkey (with the app shell, Phase 6)
+- [x] Tests for each gesture with made-up hand data
+- [ ] Tests with recorded real hand data
 - [ ] **Checkpoint:** browse a site and move files using gestures only
 
 ## Phase 4: Two-hand gestures
