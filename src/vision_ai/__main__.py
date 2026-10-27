@@ -18,6 +18,7 @@ def build_parser() -> argparse.ArgumentParser:
     mode.add_argument("--cursor", action="store_true", help="show tracking AND move the mouse")
     p.add_argument("--camera", type=int, default=0, help="camera number (default 0)")
     p.add_argument("--backend", choices=["dshow", "msmf", "auto"], help="camera backend")
+    p.add_argument("--size", help="camera picture size, for example 640x480")
     p.add_argument("--main-hand", choices=["right", "left"], default="right")
     p.add_argument(
         "--seconds",
@@ -92,6 +93,12 @@ def main(argv: list[str] | None = None) -> int:
     camera = CameraConfig(index=args.camera)
     if args.backend:
         camera = replace(camera, backend=args.backend)
+    if args.size:
+        try:
+            w, h = (int(v) for v in args.size.lower().split("x"))
+        except ValueError:
+            parser.error("--size must look like 640x480")
+        camera = replace(camera, width=w, height=h)
 
     if args.check:
         from vision_ai.core.checks import run_checks

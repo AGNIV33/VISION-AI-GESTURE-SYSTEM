@@ -24,23 +24,65 @@ def _backend_ids(name: str) -> list[int]:
     return table.get(name, [cv2.CAP_ANY])
 
 
-def open_camera(cfg: CameraConfig, fallback: bool = True):
-    """Open the camera, trying the preferred backend first (and the other one if
-    `fallback`). Returns (capture, backend_id)."""
+def _apply_settings(cap, cfg: CameraConfig) -> None:
     import cv2
 
+    # MJPG is what lets most webcams deliver 30 fps at higher sizes.
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, cfg.width)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cfg.height)
+    cap.set(cv2.CAP_PROP_FPS, cfg.fps)
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+
+def camera_info(cap) -> tuple[str, int, int, float]:
+    """What the camera really accepted: (format, width, height, fps it reports)."""
+    import cv2
+
+    code = int(cap.get(cv2.CAP_PROP_FOURCC))
+    fmt = "".join(chr((code >> (8 * i)) & 0xFF) for i in range(4)) if code > 0 else "?"
+    fmt = fmt if fmt.isprintable() else "?"
+    return (
+        fmt.strip() or "?",
+        int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+        int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+        float(cap.get(cv2.CAP_PROP_FPS)),
+    )
+
+
+def open_camera(cfg: CameraConfig, fallback: bool = True):
+    """Open the camera, trying the preferred backend first (and the other one if
+    `fallback`). Returns (capture, backend_id).
+
+    The settings are passed when opening (more reliable than setting them afterwards).
+    If the camera still gives a different size, they are applied again the old way."""
+    import cv2
+
+    params = [
+        cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"),
+        cv2.CAP_PROP_FRAME_WIDTH, cfg.width,
+        cv2.CAP_PROP_FRAME_HEIGHT, cfg.height,
+        cv2.CAP_PROP_FPS, cfg.fps,
+    ]  # fmt: skip
     ids = _backend_ids(cfg.backend)
     for backend in ids if fallback else ids[:1]:
-        cap = cv2.VideoCapture(cfg.index, backend)
-        if cap.isOpened():
-            # MJPG is what lets most webcams deliver 30 fps at 640x480.
-            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, cfg.width)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cfg.height)
-            cap.set(cv2.CAP_PROP_FPS, cfg.fps)
-            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-            return cap, backend
-        cap.release()
+        cap = None
+        try:
+            cap = cv2.VideoCapture(cfg.index, backend, params)
+        except (cv2.error, TypeError):
+            cap = None
+        if cap is None or not cap.isOpened():
+            if cap is not None:
+                cap.release()
+            cap = cv2.VideoCapture(cfg.index, backend)
+            if not cap.isOpened():
+                cap.release()
+                continue
+            _apply_settings(cap, cfg)
+        elif int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) != cfg.width:
+            _apply_settings(cap, cfg)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        return cap, backend
     return None, None
 
 

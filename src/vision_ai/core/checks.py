@@ -17,9 +17,10 @@ def _line(status: str, name: str, detail: str = "") -> None:
     print(f"[{status}] {name}" + (f": {detail}" if detail else ""))
 
 
-def _measure(cfg: CameraConfig, seconds: float = 2.0) -> tuple[float, tuple[int, int]] | None:
-    """Open the camera with these settings and measure its real speed. None if it fails."""
-    from vision_ai.core.capture import open_camera
+def _measure(cfg: CameraConfig, seconds: float = 2.0):
+    """Open the camera with exactly these settings and measure its real speed.
+    Returns (fps, (width, height), format) or None if it fails."""
+    from vision_ai.core.capture import camera_info, open_camera
 
     cap, _ = open_camera(cfg, fallback=False)  # test exactly this mode, no silent fallback
     if cap is None:
@@ -33,7 +34,8 @@ def _measure(cfg: CameraConfig, seconds: float = 2.0) -> tuple[float, tuple[int,
                 shape = img.shape
         if not frames or shape is None:
             return None
-        return frames / (time.monotonic() - t0), (shape[1], shape[0])
+        fmt = camera_info(cap)[0]
+        return frames / (time.monotonic() - t0), (shape[1], shape[0]), fmt
     finally:
         cap.release()
 
@@ -77,33 +79,38 @@ def run_checks(camera: CameraConfig, tracker: TrackerConfig) -> int:
     else:
         _line(OK, "Hand model", str(model))
 
-    # Test each camera mode and keep the fastest one.
+    # Test each camera mode and picture size, then keep the best one.
     backends = ["dshow", "msmf"] if sys.platform == "win32" else ["auto"]
-    best: tuple[float, str] | None = None
+    sizes = [(640, 480), (1280, 720)]
+    results: list[tuple[float, str, tuple[int, int]]] = []
     for name in backends:
-        res = _measure(replace(camera, backend=name))
-        if res is None:
-            _line(WARN, f"Camera ({name})", "could not open it, or it sent no pictures")
-            continue
-        fps, (w, h) = res
-        _line(
-            OK if fps >= 25 else WARN,
-            f"Camera ({name})",
-            f"{fps:.1f} fps at {w}x{h} (asked for {camera.width}x{camera.height})",
-        )
-        if best is None or fps > best[0]:
-            best = (fps, name)
-    if best is None:
+        for w, h in sizes:
+            res = _measure(replace(camera, backend=name, width=w, height=h))
+            label = f"Camera {name} {w}x{h}"
+            if res is None:
+                _line(WARN, label, "could not open it, or it sent no pictures")
+                continue
+            fps, (gw, gh), fmt = res
+            note = "" if (gw, gh) == (w, h) else f"  (camera ignored the size, gave {gw}x{gh})"
+            _line(OK if fps >= 25 else WARN, label, f"{fps:.1f} fps, format {fmt}{note}")
+            results.append((fps, name, (gw, gh)))
+    if not results:
         _line(
             FAIL,
             "Camera",
             f"cannot use camera {camera.index} (close other apps that use it, or try --camera 1)",
         )
         return 1
-    if best[0] < 25:
+    top = max(r[0] for r in results)
+    # among near-equal speeds prefer the smaller picture (less work)
+    fps, name, (w, h) = min(
+        (r for r in results if r[0] >= top - 1.5), key=lambda r: r[2][0] * r[2][1]
+    )
+    if fps < 25:
         _line(WARN, "Camera is slow", "turn on more light (a lamp in front of you) and run again")
-    camera = replace(camera, backend=best[1])
-    _line(OK, "Best camera mode", f"{best[1]} (use: --backend {best[1]})")
+    camera = replace(camera, backend=name, width=w, height=h)
+    _line(OK, "Best camera mode", f"{name} {w}x{h} at {fps:.1f} fps")
+    print(f"      To use it:  --backend {name} --size {w}x{h}")
 
     from vision_ai.core.capture import open_camera
 
