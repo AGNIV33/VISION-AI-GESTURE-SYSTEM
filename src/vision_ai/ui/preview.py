@@ -38,6 +38,38 @@ PREVIEW_WIDTH = 640
 WINDOW = "Vision AI debug  (Esc/Q quit, P pause, 1/2 smoothing, 3/4 speed)"
 
 
+class SpeedStats:
+    """Averages for the summary printed when the app stops."""
+
+    def __init__(self) -> None:
+        self.n = 0
+        self.delay = 0.0
+        self.worst = 0.0
+        self.infer = 0.0
+        self.tracker_fps = 0.0
+        self.size = (0, 0)
+
+    def add(self, out: EngineOutput, pipeline: Pipeline) -> None:
+        d = out.frame.latency_s * 1000
+        self.n += 1
+        self.delay += d
+        self.worst = max(self.worst, d)
+        self.infer += pipeline.tracker.infer_ms
+        self.tracker_fps += pipeline.tracker.fps.rate
+        if out.frame.image is not None:
+            self.size = (out.frame.image.shape[1], out.frame.image.shape[0])
+
+    def summary(self, pipeline: Pipeline) -> str:
+        if not self.n:
+            return "no pictures were tracked"
+        n = self.n
+        return (
+            f"camera {pipeline.capture.fps.rate:.1f} fps at {self.size[0]}x{self.size[1]} | "
+            f"tracker {self.tracker_fps / n:.1f} fps | inference {self.infer / n:.1f} ms | "
+            f"delay camera->tracked avg {self.delay / n:.0f} ms, worst {self.worst:.0f} ms"
+        )
+
+
 def draw(
     out: EngineOutput,
     pipeline: Pipeline,
@@ -112,12 +144,13 @@ def run_preview(
     box: tuple[float, float, float, float],
     controlling: bool,
     seconds: float = 0.0,
-) -> str:
+) -> tuple[str, str]:
     """Show the window until the user quits, an error happens, or `seconds` pass.
-    Returns the reason it stopped."""
+    Returns (reason it stopped, speed summary)."""
     import cv2
 
     start = time.monotonic()
+    stats = SpeedStats()
     seq = 0
     shown = False  # the window may report 'not visible' until the first picture is drawn
     cv2.namedWindow(WINDOW, cv2.WINDOW_AUTOSIZE)
@@ -125,12 +158,13 @@ def run_preview(
         got = pipeline.output.get(seq, timeout=0.1)
         if got is not None:
             out, seq = got
+            stats.add(out, pipeline)
             if out.frame.image is not None:
                 cv2.imshow(WINDOW, draw(out, pipeline, box, controlling))
                 shown = True
         key = cv2.waitKey(1) & 0xFF
         if key in (27, ord("q"), ord("Q")):
-            return "closed by user"
+            return "closed by user", stats.summary(pipeline)
         if key in (ord("p"), ord("P")) and controlling:
             pipeline.set_control_enabled(not pipeline.control_enabled)
         ctrl = pipeline.controller
@@ -146,9 +180,9 @@ def run_preview(
                 ctrl.tune(beta=c.beta * 1.5)
             print(f"smoothing min_cutoff={ctrl.cfg.min_cutoff:.2f}  speed beta={ctrl.cfg.beta:.3f}")
         if shown and cv2.getWindowProperty(WINDOW, cv2.WND_PROP_VISIBLE) < 1:
-            return "window closed"
+            return "window closed", stats.summary(pipeline)
         err = pipeline.first_error()
         if err:
-            return err
+            return err, stats.summary(pipeline)
         if seconds and time.monotonic() - start >= seconds:
-            return f"time limit ({seconds:.0f} s) reached"
+            return f"time limit ({seconds:.0f} s) reached", stats.summary(pipeline)

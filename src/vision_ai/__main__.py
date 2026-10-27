@@ -75,8 +75,9 @@ def run_app(args: argparse.Namespace, camera: CameraConfig, control: bool) -> in
             print("Mouse control is ON. Stop with Esc/Q in the preview window, or Ctrl+C here.")
             if seconds:
                 print(f"It stops by itself after {seconds:.0f} seconds (change with --seconds).")
-        reason = run_preview(pipe, cursor_cfg.box, control, seconds)
+        reason, summary = run_preview(pipe, cursor_cfg.box, control, seconds)
         print(f"Stopped: {reason}")
+        print(f"SPEED SUMMARY: {summary}")
         return 0 if reason in ("closed by user", "window closed") or "time limit" in reason else 1
     except KeyboardInterrupt:
         print("Stopped: Ctrl+C")
