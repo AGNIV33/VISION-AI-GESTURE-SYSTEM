@@ -53,7 +53,7 @@ MediaPipe gives 21 points per hand. The important ones:
 
 ### 1.4 Smoothness rules
 
-1. One Euro Filter on the aim point (`min_cutoff ≈ 1.0`, `beta ≈ 0.007`, tuned in testing).
+1. One Euro Filter on the aim point (`min_cutoff ≈ 1.0`, `beta ≈ 0.05`; 0.007 added up to 78 ms of lag in testing). Live tuning keys 1-4 in the preview.
 2. Dead zone: ignore moves smaller than ~2 pixels when the hand is almost still.
 3. Freeze the cursor for the first ~120 ms of a pinch (stops "click drift").
 4. The cursor thread moves the real cursor at ~120 Hz toward the target, with tiny prediction.

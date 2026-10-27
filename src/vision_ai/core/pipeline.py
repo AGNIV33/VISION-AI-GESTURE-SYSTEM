@@ -97,6 +97,7 @@ class Pipeline:
         self.output: LatestSlot[EngineOutput] = LatestSlot()
         self.capture = CaptureThread(self.frames, camera)
         self.tracker = TrackerThread(self.frames, self.hands, model_path, tracker)
+        self.controller = controller
         self.cursor = CursorThread(mover, cursor_cfg) if mover is not None else None
         self.engine = EngineThread(self.hands, self.output, controller, self.cursor)
 

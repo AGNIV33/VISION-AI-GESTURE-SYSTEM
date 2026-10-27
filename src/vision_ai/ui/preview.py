@@ -35,7 +35,7 @@ HAND_EDGES = (
 
 PREVIEW_WIDTH = 640
 
-WINDOW = "Vision AI debug  (Esc/Q = quit, P = pause/resume mouse control)"
+WINDOW = "Vision AI debug  (Esc/Q quit, P pause, 1/2 smoothing, 3/4 speed)"
 
 
 def draw(
@@ -92,6 +92,11 @@ def draw(
     ]
     if controlling:
         lines.append("MOUSE CONTROL: ON" if pipeline.control_enabled else "MOUSE CONTROL: PAUSED")
+        if pipeline.controller is not None:
+            c = pipeline.controller.cfg
+            lines.append(
+                f"smoothing {c.min_cutoff:.2f} (1 less / 2 more)   speed {c.beta:.3f} (3 / 4)"
+            )
     else:
         lines.append("tracking only (mouse not controlled)")
     for i, text in enumerate(lines):
@@ -128,6 +133,18 @@ def run_preview(
             return "closed by user"
         if key in (ord("p"), ord("P")) and controlling:
             pipeline.set_control_enabled(not pipeline.control_enabled)
+        ctrl = pipeline.controller
+        if ctrl is not None and key in (ord("1"), ord("2"), ord("3"), ord("4")):
+            c = ctrl.cfg
+            if key == ord("1"):  # less smoothing = more responsive, more shake
+                ctrl.tune(min_cutoff=c.min_cutoff * 1.25)
+            elif key == ord("2"):  # more smoothing = steadier, more lag
+                ctrl.tune(min_cutoff=c.min_cutoff / 1.25)
+            elif key == ord("3"):
+                ctrl.tune(beta=c.beta / 1.5)
+            else:
+                ctrl.tune(beta=c.beta * 1.5)
+            print(f"smoothing min_cutoff={ctrl.cfg.min_cutoff:.2f}  speed beta={ctrl.cfg.beta:.3f}")
         if shown and cv2.getWindowProperty(WINDOW, cv2.WND_PROP_VISIBLE) < 1:
             return "window closed"
         err = pipeline.first_error()

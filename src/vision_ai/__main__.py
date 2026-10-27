@@ -19,6 +19,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--camera", type=int, default=0, help="camera number (default 0)")
     p.add_argument("--backend", choices=["dshow", "msmf", "auto"], help="camera backend")
     p.add_argument("--size", help="camera picture size, for example 640x480")
+    p.add_argument("--hands", type=int, choices=[1, 2], default=1, help="hands to track")
     p.add_argument("--main-hand", choices=["right", "left"], default="right")
     p.add_argument(
         "--seconds",
@@ -61,7 +62,8 @@ def run_app(args: argparse.Namespace, camera: CameraConfig, control: bool) -> in
     else:
         enable_dpi_awareness()
 
-    pipe = Pipeline(camera, TrackerConfig(), cursor_cfg, model, controller, mover)
+    tracker_cfg = replace(TrackerConfig(), num_hands=args.hands)
+    pipe = Pipeline(camera, tracker_cfg, cursor_cfg, model, controller, mover)
     pipe.start()
     try:
         pipe.capture.opened.wait(timeout=15)

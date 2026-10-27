@@ -16,6 +16,15 @@ class CursorController:
         self._dead = DeadZone(cfg.dead_zone_px)
         self._last_seen: float | None = None
 
+    def tune(self, min_cutoff: float | None = None, beta: float | None = None) -> None:
+        """Change smoothing while running. Lower min_cutoff = steadier but slower;
+        higher beta = less lag on fast moves."""
+        if min_cutoff is not None:
+            self.cfg.min_cutoff = max(0.05, min_cutoff)
+        if beta is not None:
+            self.cfg.beta = max(0.0, beta)
+        self._filter.set_params(self.cfg.min_cutoff, self.cfg.beta)
+
     def reset(self) -> None:
         self._filter.reset()
         self._dead.reset()

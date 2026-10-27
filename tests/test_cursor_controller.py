@@ -48,3 +48,16 @@ def test_hand_returning_after_gap_does_not_glide_from_old_spot():
     c.update(make_frame(0.0, [make_hand(index_mcp=(0.2, 0.25))]))
     x, _ = c.update(make_frame(5.0, [make_hand(index_mcp=(0.8, 0.25))]))
     assert x > 1900
+
+
+def test_tune_changes_filter_live():
+    c = controller()
+    c.tune(min_cutoff=2.0, beta=0.1)
+    assert c.cfg.min_cutoff == 2.0 and c.cfg.beta == 0.1
+    assert c._filter._fx.min_cutoff == 2.0 and c._filter._fy.beta == 0.1
+
+
+def test_tune_never_goes_below_safe_limits():
+    c = controller()
+    c.tune(min_cutoff=-5, beta=-1)
+    assert c.cfg.min_cutoff > 0 and c.cfg.beta == 0

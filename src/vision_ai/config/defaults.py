@@ -20,7 +20,9 @@ class CameraConfig:
 
 @dataclass
 class TrackerConfig:
-    num_hands: int = 2
+    # 1 hand is much faster: with 2, MediaPipe keeps searching for a second hand on
+    # every picture while only one is visible. Two-hand gestures (Phase 4) will need 2.
+    num_hands: int = 1
     min_detection_confidence: float = 0.5
     min_presence_confidence: float = 0.5
     min_tracking_confidence: float = 0.5
@@ -38,7 +40,7 @@ class CursorConfig:
     # One Euro filter. Applied in "box units" (0..1000 across the active box),
     # so the feel does not depend on screen resolution.
     min_cutoff: float = 1.0
-    beta: float = 0.007
+    beta: float = 0.05  # was 0.007: owner found it too laggy (2026-10-27)
     d_cutoff: float = 1.0
     dead_zone_px: float = 2.0
     lost_timeout_s: float = 0.3  # no hand for this long -> forget the old position

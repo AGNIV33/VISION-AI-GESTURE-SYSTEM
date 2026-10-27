@@ -54,5 +54,10 @@ class OneEuroFilter2D:
         self._fx.reset()
         self._fy.reset()
 
+    def set_params(self, min_cutoff: float, beta: float) -> None:
+        for f in (self._fx, self._fy):
+            f.min_cutoff = min_cutoff
+            f.beta = beta
+
     def __call__(self, x: float, y: float, t: float) -> tuple[float, float]:
         return self._fx(x, t), self._fy(y, t)
