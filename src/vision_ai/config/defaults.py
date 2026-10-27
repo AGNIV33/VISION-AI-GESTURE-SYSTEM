@@ -35,8 +35,8 @@ class TrackerConfig:
 @dataclass
 class CursorConfig:
     # Active box in mirrored camera coordinates (0..1): left, top, width, height.
-    # Lower-middle of the view so the arm can rest.
-    box: tuple[float, float, float, float] = (0.20, 0.25, 0.60, 0.60)
+    # Large box, clear of the picture edges where tracking gets shaky.
+    box: tuple[float, float, float, float] = (0.15, 0.08, 0.70, 0.70)
     main_hand: str = "right"
     # One Euro filter. Applied in "box units" (0..1000 across the active box),
     # so the feel does not depend on screen resolution.
@@ -68,9 +68,9 @@ class GestureConfig:
     arm_off: float = 0.56
     arm_freeze_max_s: float = 0.25  # stop freezing if fingers hover close without pinching
     confirm_frames: int = 2  # a pinch/release must last this many pictures to count
-    tap_max_s: float = 0.35  # pinch shorter than this = click
-    drag_start_units: float = 30.0  # move this far while pinched = drag (box units, 1000 = box)
-    drag_hold_s: float = 0.40  # or hold the pinch this long = drag
+    tap_max_s: float = 0.70  # pinch shorter than this = click
+    drag_start_units: float = 70.0  # move this far while pinched = drag (box units, 1000 = box)
+    drag_hold_s: float = 0.80  # or hold the pinch this long = drag
     double_click_s: float = 0.50  # second tap this soon lands on the first tap's spot
     finger_extended: float = 1.30  # tip-to-wrist / middle-joint-to-wrist above this = straight
     finger_folded: float = 1.10  # below this = curled

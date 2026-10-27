@@ -16,14 +16,14 @@ def test_no_hand_returns_none():
 
 def test_hand_gives_screen_position():
     c = controller()
-    x, y = c.update(make_frame(0.0, [make_hand(index_mcp=(0.5, 0.55))]))
+    x, y = c.update(make_frame(0.0, [make_hand(index_mcp=(0.5, 0.43))]))
     assert 900 < x < 1020 and 500 < y < 580
 
 
 def test_main_hand_preferred_over_other_hand():
     c = controller(main_hand="right")
-    left = make_hand("left", index_mcp=(0.2, 0.25))
-    right = make_hand("right", index_mcp=(0.8, 0.85))
+    left = make_hand("left", index_mcp=(0.1, 0.05))
+    right = make_hand("right", index_mcp=(0.9, 0.9))
     x, y = c.update(make_frame(0.0, [left, right]))
     assert x > 1900 and y > 1060
 
@@ -45,8 +45,8 @@ def test_still_hand_with_jitter_barely_moves_cursor():
 
 def test_hand_returning_after_gap_does_not_glide_from_old_spot():
     c = controller()
-    c.update(make_frame(0.0, [make_hand(index_mcp=(0.2, 0.25))]))
-    x, _ = c.update(make_frame(5.0, [make_hand(index_mcp=(0.8, 0.25))]))
+    c.update(make_frame(0.0, [make_hand(index_mcp=(0.1, 0.25))]))
+    x, _ = c.update(make_frame(5.0, [make_hand(index_mcp=(0.9, 0.25))]))
     assert x > 1900
 
 

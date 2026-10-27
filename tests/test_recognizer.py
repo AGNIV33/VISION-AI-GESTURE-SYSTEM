@@ -80,7 +80,7 @@ def test_pinch_and_move_is_a_drag():
 def test_long_pinch_without_moving_becomes_a_drag_not_a_click():
     run = Runner()
     run.feed(pose())
-    run.feed(pose(idx=0.1), frames=20)  # ~0.67 s
+    run.feed(pose(idx=0.1), frames=30)  # ~1 s
     run.feed(pose(idx=0.9), frames=3)
     assert run.events == [("down", "left"), ("up", "left")]
 
