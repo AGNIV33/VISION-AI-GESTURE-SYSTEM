@@ -31,7 +31,7 @@ Update this file in the same commit as the work. Each phase ends with a demo che
 - [x] One Euro Filter + unit tests (default values are untuned)
 - [x] Hand-size scaling in `features.py`
 - [x] `cursor_mapper.py`: active box → screen (absolute mode)
-- [ ] Trackpad mode with acceleration
+- [~] Trackpad mode with acceleration (Settings > Cursor)
 - [x] Dead zone
 - [~] Aim at the middle of 4 knuckles (steadier) + shorter glide (tau 0.012). Needs owner's feel test
 - [~] High-rate cursor thread (~120 Hz) with light prediction (logic tested; feel needs the owner's PC)
@@ -45,59 +45,59 @@ Update this file in the same commit as the work. Each phase ends with a demo che
 - [~] Drag (pinch + move, or pinch held 0.4 s)
 - [~] Scroll (two-finger pose, vertical + horizontal)
 - [~] One-hand zoom (thumb on index + middle fingertips, hand up/down = Ctrl+wheel). Quick tap there still clicks
-- [ ] Scroll inertia
+- [~] Scroll inertia (coasts after a fast scroll)
 - [~] Pause / resume (fist held 1.5 s, or P in the preview)
-- [ ] Global pause hotkey (with the app shell, Phase 6)
+- [~] Global pause hotkey (Ctrl+Alt+P, in the app)
 - [x] Tests for each gesture with made-up hand data
 - [ ] Tests with recorded real hand data
 - [ ] **Checkpoint:** browse a site and move files using gestures only
 
 ## Phase 4: Two-hand gestures
-- [ ] `win_touch.py`: touch injection (2 contacts)
-- [ ] Two-hand zoom (touch injection); Ctrl+wheel one-hand zoom is in Phase 3
-- [ ] Rotate
-- [ ] Priority rules (two-hand beats one-hand)
+- [ ] `win_touch.py`: touch injection (2 contacts). NOT built: needs a Windows test machine; Ctrl+wheel used instead
+- [~] Two-hand zoom with Ctrl+wheel (pinch with both hands, move apart / closer; Settings: track two hands)
+- [ ] Rotate (needs touch injection)
+- [~] Priority rules (two-hand beats one-hand)
 - [ ] **Checkpoint:** zoom works in Edge/Chrome and Photos
 
 ## Phase 5: System gestures
-- [ ] Palm-facing detection
-- [ ] Home gesture → Win+Tab
+- [x] Palm-facing detection: dropped (palm always faces the camera). Replaced by a ring-finger pinch
+- [~] Task View gesture: thumb + ring fingertip held 0.5 s → Win+Tab
 - [ ] **Checkpoint:** no false triggers in 10 minutes of normal use
 
 ## Phase 6: App shell
-- [ ] Single-instance lock
-- [ ] Tray icon + menu (Pause, Preview, Settings, Quit)
-- [ ] Settings model (pydantic) + JSON save/load + live apply
-- [ ] Settings window with all tabs (DESIGN.md 2.2 B)
-- [ ] Setup wizard (4 steps)
-- [ ] Feedback overlay (click-through ring)
-- [ ] Start with Windows (registry Run key)
-- [ ] Close-to-tray + one-time balloon tip
-- [ ] Dark glass theme (`theme.qss`)
+- [~] Single-instance lock
+- [~] Tray icon + menu (Pause, Settings, Camera, Calibrate, Setup guide, Start with Windows, Quit)
+- [~] Settings model (plain dataclass, no pydantic) + JSON save/load + live apply
+- [~] Settings window (General, Gestures, Cursor, License, About)
+- [~] Setup wizard (welcome, camera, calibrate, finish)
+- [~] Feedback overlay (click-through ring)
+- [~] Start with Windows (registry Run key)
+- [~] Close-to-tray + one-time balloon tip
+- [~] Dark theme (`app/theme.py`)
 - [ ] **Checkpoint:** a new user can set up in under 2 minutes
 
 ## Phase 7: Polish + speed
 - [ ] Measure CPU, RAM, delay; meet PRD targets
-- [ ] Low-light warning
-- [ ] Admin-window (UIPI) notice
-- [ ] Error handling: camera unplugged, camera in use by another app
+- [~] Low-light warning
+- [~] Admin-window (UIPI) notice
+- [~] Error handling: camera unplugged / in use (message + retry every 5 s)
 - [ ] Final tuning of default thresholds with the owner
 
 ## Phase 8: Packaging
-- [ ] `scripts/build.ps1` (Nuitka standalone)
-- [ ] `installer/vision_ai.iss` (Inno Setup)
-- [~] App icon + version info (icon done: `assets/icons/app.ico`; version info later)
+- [~] `scripts/build.ps1` (Nuitka standalone). Written, never run: first build will need fixes
+- [~] `installer/vision_ai.iss` (Inno Setup). Written, never run
+- [~] App icon + version info (icon + Nuitka version flags)
 - [ ] Test on a clean Windows PC / VM
 
 ## Phase 9: Licensing
-- [ ] Choose a provider (Lemon Squeezy / Keygen / other)
-- [ ] `licensing/features.py`: free vs paid gesture list
-- [ ] License key activation + offline grace period
-- [ ] Owner/developer mode (everything unlocked)
-- [ ] License tab in Settings
+- [ ] Choose a provider (Lemon Squeezy / Keygen / other). Open: keys are made offline with `tools/make_license.py`
+- [~] `licensing/features.py`: free vs paid gesture list (free: move, tap, scroll, pause)
+- [~] License key activation (offline signed keys; works without internet; optional expiry date)
+- [~] Owner mode: an `owner` key made with `tools/make_license.py` unlocks everything
+- [~] License tab in Settings
 
 ## Phase 10: Launch prep
-- [ ] Code-signing certificate
-- [ ] Privacy policy (camera use, no data sent)
-- [ ] Website / store page + demo video
+- [ ] Code-signing certificate (steps in `docs/RELEASE.md`; must be bought)
+- [~] Privacy policy draft (`docs/PRIVACY.md`, needs a lawyer's look)
+- [~] Website page draft (`website/index.html`); demo video not made
 - [ ] Release v1.0.0

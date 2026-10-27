@@ -48,7 +48,7 @@ MediaPipe gives 21 points per hand. The important ones:
 | **Scroll** | Index and middle fingers up together, others folded ("two-finger pose") | Pose ends | Hand move up/down/left/right = scroll; release with speed = inertia scroll |
 | **Zoom** | Both hands pinched | Either hand releases | Distance change between hands = zoom amount |
 | **Rotate** | Both hands pinched | Either hand releases | Angle change of the line between hands = rotation |
-| **Home** | Palm faces the camera (all fingers up) + pinch | Release | Win+Tab (Task View) |
+| **Task View** | Touch thumb to the RING fingertip, hold 0.5 s | Release | Win+Tab (Task View). Changed from "palm + pinch": the palm faces the camera while moving, so it could not be told apart |
 | **Pause** | Fist held 1.5 s | — | Toggles pause; tray icon and overlay show the state |
 
 > **Scroll note:** Scroll uses the **two-finger pose** (not "pinch + move") so it never clashes with Drag. This can change after testing.

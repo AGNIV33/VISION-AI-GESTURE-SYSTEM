@@ -1,6 +1,6 @@
 from vision_ai.actions.dispatcher import Dispatcher
 from vision_ai.gestures.hand_pose import EXT, FOLD, HandPose
-from vision_ai.gestures.recognizer import DRAG, IDLE, SCROLL, ZOOM, GestureRecognizer
+from vision_ai.gestures.recognizer import DRAG, HOME_DONE, IDLE, SCROLL, ZOOM, GestureRecognizer
 
 OPEN = (EXT, EXT, EXT, EXT)
 FIST = (FOLD, FOLD, FOLD, FOLD)
@@ -8,8 +8,8 @@ PEACE = (EXT, EXT, FOLD, FOLD)
 DT = 1 / 30
 
 
-def pose(idx=1.0, mid=1.0, fingers=OPEN):
-    return HandPose(pinch_index=idx, pinch_middle=mid, fingers=fingers)
+def pose(idx=1.0, mid=1.0, fingers=OPEN, ring=1.0):
+    return HandPose(pinch_index=idx, pinch_middle=mid, fingers=fingers, pinch_ring=ring)
 
 
 class Runner:
@@ -248,3 +248,70 @@ def test_slow_scroll_is_not_lost_and_half_seen_finger_keeps_scrolling():
         run.feed(pose(fingers=half), pos=(500.0, 500.0 - 0.5 * i))
     assert run.out.state == SCROLL
     assert sum(e[1] for e in run.events if e[0] == "scroll") > 20
+
+
+def test_ring_pinch_held_opens_task_view_once():
+    run = Runner()
+    run.feed(pose(), frames=3)
+    run.feed(pose(ring=0.1), frames=10)  # 0.33 s: not long enough yet
+    assert run.events == []
+    run.feed(pose(ring=0.1), frames=10)
+    assert run.events == [("home",)] and run.out.state == HOME_DONE and run.out.freeze
+    run.feed(pose(ring=0.1), frames=30)  # holding on does not repeat
+    assert run.events == [("home",)]
+    run.feed(pose(), frames=4)
+    assert run.out.state == IDLE
+
+
+def test_short_ring_pinch_does_nothing():
+    run = Runner()
+    run.feed(pose(ring=0.1), frames=6)
+    run.feed(pose(), frames=5)
+    assert run.events == []
+
+
+def test_index_pinch_with_ring_also_close_is_still_a_click_not_task_view():
+    run = Runner()
+    run.feed(pose(), frames=3)
+    run.feed(pose(idx=0.1, ring=0.1), frames=4)
+    run.feed(pose(), frames=3)
+    assert run.events == [("click", "left")]
+
+
+def _flick_scroll(run, speed, frames=12):
+    run.feed(pose(fingers=PEACE), frames=2)
+    for i in range(1, frames + 1):
+        run.feed(pose(fingers=PEACE), pos=(500.0, 500.0 - speed * i))
+    return (500.0, 500.0 - speed * frames)
+
+
+def test_fast_scroll_keeps_coasting_then_fades_out():
+    run = Runner()
+    end = _flick_scroll(run, speed=10.0)  # 10 units / picture = fast
+    run.events.clear()
+    run.feed(pose(), pos=end, frames=8)  # fingers relax: scroll ends
+    run.feed(pose(), pos=end, frames=60)  # 2 s of coasting
+    rolled = [e for e in run.events if e[0] == "scroll"]
+    assert rolled and all(e[1] > 0 for e in rolled)
+    assert sum(e[1] for e in rolled) > 60
+    run.events.clear()
+    run.feed(pose(), pos=end, frames=30)
+    assert run.events == []  # faded out completely
+
+
+def test_slow_scroll_does_not_coast():
+    run = Runner()
+    end = _flick_scroll(run, speed=0.5)
+    run.events.clear()
+    run.feed(pose(), pos=end, frames=60)
+    assert run.events == []
+
+
+def test_starting_another_gesture_stops_coasting():
+    run = Runner()
+    end = _flick_scroll(run, speed=10.0)
+    run.feed(pose(), pos=end, frames=6)
+    run.events.clear()
+    run.feed(pose(fingers=FIST), pos=end, frames=3)
+    run.feed(pose(), pos=end, frames=30)
+    assert [e for e in run.events if e[0] == "scroll"] == []

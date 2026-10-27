@@ -75,6 +75,8 @@ def draw(
     pipeline: Pipeline,
     box: tuple[float, float, float, float],
     controlling: bool,
+    tuning: bool = True,
+    info: bool = True,
 ) -> np.ndarray:
     import cv2
 
@@ -115,6 +117,16 @@ def draw(
             2,
         )
 
+    if not info:  # app windows: only the gesture name, the picture stays clear
+        lines = [f"{out.gesture}" if out.gesture else ""]
+        controlling = False
+    else:
+        lines = _info_lines(out, pipeline, controlling, tuning)
+    _put_lines(image, lines)
+    return image
+
+
+def _info_lines(out, pipeline, controlling, tuning) -> list[str]:
     lines = [
         f"camera {pipeline.capture.fps.rate:4.1f} fps"
         f"   tracker {pipeline.tracker.fps.rate:4.1f} fps",
@@ -130,19 +142,24 @@ def draw(
     ]
     if controlling:
         lines.append("MOUSE CONTROL: ON" if pipeline.control_enabled else "MOUSE CONTROL: PAUSED")
-        if pipeline.controller is not None:
+        if tuning and pipeline.controller is not None:
             c = pipeline.controller.cfg
             lines.append(
                 f"smoothing {c.min_cutoff:.2f} (1 less / 2 more)   speed {c.beta:.3f} (3 / 4)"
             )
     else:
         lines.append("tracking only (mouse not controlled)")
+    return lines
+
+
+def _put_lines(image, lines) -> None:
+    import cv2
+
     for i, text in enumerate(lines):
         cv2.putText(image, text, (8, 20 + 20 * i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
         cv2.putText(
             image, text, (8, 20 + 20 * i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1
         )
-    return image
 
 
 def run_preview(

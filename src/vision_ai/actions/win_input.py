@@ -136,13 +136,27 @@ def wheel(delta: int, horizontal: bool = False) -> None:
 
 KEYEVENTF_KEYUP = 0x0002
 VK_CONTROL = 0x11
-_VK = {"ctrl": VK_CONTROL}
+_VK = {"ctrl": VK_CONTROL, "win": 0x5B, "tab": 0x09}
 
 
 def key(name: str, down: bool) -> None:
-    """Press or release a key (only 'ctrl' for now; used for Ctrl+wheel zoom)."""
+    """Press or release a key: 'ctrl', 'win' or 'tab' (Ctrl+wheel zoom, Win+Tab)."""
     inp = INPUT(type=1)  # INPUT_KEYBOARD
     inp.ki = KEYBDINPUT(_VK[name], 0, 0 if down else KEYEVENTF_KEYUP, 0, 0)
     sent = _api().SendInput(1, ctypes.byref(inp), ctypes.sizeof(INPUT))
     if sent != 1:
         raise OSError(f"SendInput failed (error {ctypes.get_last_error()})")
+
+
+class _POINT(ctypes.Structure):
+    _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
+
+
+def cursor_pos() -> tuple[int, int]:
+    """Where the mouse cursor is now (pixels on the virtual desktop)."""
+    u = _api()
+    pt = _POINT()
+    u.GetCursorPos.argtypes = [ctypes.POINTER(_POINT)]
+    if not u.GetCursorPos(ctypes.byref(pt)):
+        raise OSError("GetCursorPos failed")
+    return pt.x, pt.y

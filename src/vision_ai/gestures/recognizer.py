@@ -4,7 +4,7 @@ Each picture: pose + hand position in, gesture state + events out.
 
 Events:
     ("click", "left" | "right")   ("down", "left")   ("up", "left")
-    ("scroll", delta)   ("hscroll", delta)   ("zoom", delta)   (120 = one wheel notch)
+    ("scroll", delta)   ("hscroll", delta)   ("zoom", delta)   ("home",)   (120 = one wheel notch)
     ("toggle_pause",)
 """
 
@@ -23,6 +23,8 @@ DRAG = "drag"
 RIGHT = "right click"
 SCROLL = "scroll"
 ZOOM = "zoom"
+HOME = "task view (hold)"
+HOME_DONE = "task view"
 FIST = "fist (hold to pause)"
 FIST_DONE = "fist"
 
@@ -55,12 +57,33 @@ class GestureRecognizer:
         self._snap = False
         self._both = 0
         self._zoomed = False
+        self._ring_on = self._ring_off = 0
+        self._scroll_v = [0.0, 0.0]  # wheel units / second, last good value while scrolling
+        self._inertia = [0.0, 0.0]
+        self._last_t = 0.0
 
     def _go(self, state: str, t: float) -> None:
         self.state = state
         self._t_enter = t
         if state == IDLE:
             self._snap = False
+
+    def _coast(self, dt: float) -> list[Event]:
+        """Scrolling keeps rolling for a moment after you stop, and fades out."""
+        c = self.cfg
+        out: list[Event] = []
+        if max(abs(v) for v in self._inertia) < c.scroll_inertia_stop_v:
+            self._inertia = [0.0, 0.0]
+            return out
+        decay = math.exp(-dt / c.scroll_inertia_tau_s)
+        for i, kind in ((0, "scroll"), (1, "hscroll")):
+            self._acc[i] += self._inertia[i] * dt
+            self._inertia[i] *= decay
+            whole = int(self._acc[i])
+            if whole:
+                out.append((kind, whole))
+                self._acc[i] -= whole
+        return out
 
     def _start_zoom(self, pos: tuple[float, float], t: float) -> None:
         self._go(ZOOM, t)
@@ -86,6 +109,15 @@ class GestureRecognizer:
         self._mid_on = self._mid_on + 1 if pose.pinch_middle < c.mid_pinch_on else 0
         self._mid_off = self._mid_off + 1 if pose.pinch_middle > c.mid_pinch_off else 0
         n = c.confirm_frames
+        self._ring_on = self._ring_on + 1 if pose.pinch_ring < c.ring_pinch_on else 0
+        self._ring_off = self._ring_off + 1 if pose.pinch_ring > c.ring_pinch_off else 0
+        ring_pinch = (
+            self._ring_on >= n
+            and pose.pinch_index > c.pinch_off
+            and pose.pinch_middle > c.mid_pinch_off
+        )
+        dt = max(t - self._last_t, 1e-3) if self._last_t else 1 / 30
+        self._last_t = t
         # zoom pose: thumb touching BOTH index and middle fingertips
         both = pose.pinch_index < c.pinch_on and pose.pinch_middle < c.mid_pinch_on
         self._both = self._both + 1 if both else 0
@@ -101,10 +133,14 @@ class GestureRecognizer:
                 self._last_pos = pos
                 self._acc = [0.0, 0.0]
                 self._pose_off = 0
+                self._scroll_v = [0.0, 0.0]
+                self._inertia = [0.0, 0.0]
             elif zoom_start:
                 self._start_zoom(pos, t)
             elif right_pinch:
                 self._go(RIGHT, t)
+            elif ring_pinch:
+                self._go(HOME, t)
             elif pose.pinch_index < c.arm_on:
                 self._go(ARMED, t)
                 self._snap = (t - self._last_click_t) < c.double_click_s
@@ -148,6 +184,9 @@ class GestureRecognizer:
         elif s == SCROLL:
             self._pose_off = 0 if pose.keeps_scroll_pose else self._pose_off + 1
             if self._pose_off >= c.pose_exit_frames:
+                if max(abs(v) for v in self._scroll_v) >= c.scroll_inertia_min_v:
+                    self._inertia = list(self._scroll_v)
+                    self._acc = [0.0, 0.0]
                 self._go(IDLE, t)
             elif self._last_pos is not None:
                 dx = pos[0] - self._last_pos[0]
@@ -155,8 +194,10 @@ class GestureRecognizer:
                 self._last_pos = pos
                 # hand up = scroll up (y grows downward); hand right = scroll right
                 for i, d, sign, kind in ((0, dy, -1.0, "scroll"), (1, dx, 1.0, "hscroll")):
-                    if abs(d) > c.scroll_deadband_units:
-                        self._acc[i] += sign * d * c.scroll_gain
+                    step = sign * d * c.scroll_gain if abs(d) > c.scroll_deadband_units else 0.0
+                    self._acc[i] += step
+                    if self._pose_off == 0:  # speed of the hand while the pose is clean
+                        self._scroll_v[i] += 0.4 * (step / dt - self._scroll_v[i])
                     whole = int(self._acc[i])
                     if whole:
                         events.append((kind, whole))
@@ -179,6 +220,17 @@ class GestureRecognizer:
                     self._acc[0] -= whole
                     self._zoomed = True
 
+        elif s == HOME:
+            if self._ring_off >= n:
+                self._go(IDLE, t)
+            elif t - self._t_enter >= c.home_hold_s:
+                events.append(("home",))
+                self._go(HOME_DONE, t)
+
+        elif s == HOME_DONE:
+            if self._ring_off >= n:
+                self._go(IDLE, t)
+
         elif s == FIST:
             if not pose.is_fist:
                 self._go(IDLE, t)
@@ -190,8 +242,12 @@ class GestureRecognizer:
             if not pose.is_fist:
                 self._go(IDLE, t)
 
+        if self.state == IDLE:
+            events += self._coast(dt)
+        else:
+            self._inertia = [0.0, 0.0]
         st = self.state
-        freeze = st in (PINCHED, RIGHT, SCROLL, ZOOM, FIST, FIST_DONE) or (
+        freeze = st in (PINCHED, RIGHT, SCROLL, ZOOM, HOME, HOME_DONE, FIST, FIST_DONE) or (
             st == ARMED and t - self._t_enter < c.arm_freeze_max_s
         )
         return GestureOutput(

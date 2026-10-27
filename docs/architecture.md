@@ -61,45 +61,60 @@ MediaPipe and OpenCV release Python's GIL during heavy work, so these threads re
 vision-ai-gesture-system/
 ├── docs/                      # These docs
 ├── src/vision_ai/
-│   ├── __main__.py            # Entry point: python -m vision_ai
-│   ├── app.py                 # Builds and wires everything together
+│   ├── __init__.py            # version, app name, author, copyright
+│   ├── __main__.py            # No args = tray app. --check/--debug/--cursor/--calibrate = tools
+│   ├── resources.py           # finds icons/model in the project or an installed app
 │   ├── core/
-│   │   ├── types.py           # Hand, HandFrame, Frame, landmark indices
+│   │   ├── types.py           # Hand, HandFrame, Frame, landmark indices, aim_point
 │   │   ├── slot.py            # LatestSlot (newest-item mailbox), RateMeter
-│   │   ├── capture.py         # CaptureThread
+│   │   ├── capture.py         # CaptureThread (+ picture brightness for the low-light tip)
 │   │   ├── tracker.py         # TrackerThread (MediaPipe)
-│   │   ├── pipeline.py        # EngineThread + Pipeline: starts/stops threads, pause/resume
+│   │   ├── pipeline.py        # EngineThread + Pipeline: threads, pause, two-hand priority
+│   │   ├── runtime.py         # build_pipeline(): configs -> ready Pipeline
 │   │   └── checks.py          # python -m vision_ai --check
-│   ├── gestures/
+│   ├── gestures/              # pure Python, tested without a camera
 │   │   ├── one_euro.py        # One Euro Filter
-│   │   ├── features.py        # Pinch distance, finger states, palm facing, scaled by hand size
-│   │   ├── recognizer.py      # Runs all gesture state machines
-│   │   ├── cursor_mapper.py   # Active box → screen, dead zone (trackpad mode: later)
-│   │   ├── cursor_controller.py # Hand → filtered screen position
-│   │   └── definitions/       # One file per gesture (tap.py, drag.py, scroll.py, zoom.py, ...)
+│   │   ├── features.py        # (older 3D helpers, not used by the recognizer)
+│   │   ├── hand_pose.py       # 2D pinch numbers (index, middle, ring) + finger states
+│   │   ├── recognizer.py      # One-hand state machine: tap, drag, right click, scroll (+coast),
+│   │   │                      #   zoom, Task View, fist pause
+│   │   ├── two_hand.py        # Two-hand zoom
+│   │   ├── calibrator.py      # Measures the user's pinch numbers
+│   │   ├── cursor_mapper.py   # Active box -> screen, dead zone
+│   │   └── cursor_controller.py # Hand -> screen position (absolute or trackpad mode)
 │   ├── actions/
-│   │   ├── win_input.py       # SendInput wrappers (move, click, wheel, keys)
-│   │   ├── win_touch.py       # Touch injection (zoom, rotate)
+│   │   ├── win_input.py       # SendInput wrappers (move, click, wheel, keys, cursor_pos)
 │   │   ├── cursor_thread.py   # CursorSmoother (pure logic) + high-rate CursorThread
-│   │   └── dispatcher.py      # GestureEvent → Windows action
+│   │   └── dispatcher.py      # Event -> Windows action, with plan / user on-off switches
+│   ├── app/                   # the Qt tray app (PySide6)
+│   │   ├── main.py            # AppShell: creates and connects everything
+│   │   ├── engine.py          # EngineManager: start/stop/retry, live settings, warnings
+│   │   ├── controller.py      # AppController: settings, saving, license, hotkey, autostart
+│   │   ├── tray.py            # Tray icon + menu
+│   │   ├── settings_window.py # General / Gestures / Cursor / License / About
+│   │   ├── wizard.py          # Setup guide + calibration dialog
+│   │   ├── camera_view.py     # Camera picture with hand lines
+│   │   ├── overlay.py         # Click-through ring that flashes on click
+│   │   ├── single_instance.py # Only one copy may run
+│   │   ├── theme.py           # Dark style sheet
+│   │   └── logs.py            # Log file in %APPDATA%\VisionAI\logs
 │   ├── ui/
-│   │   ├── tray.py
-│   │   ├── settings_window.py
-│   │   ├── setup_wizard.py
-│   │   ├── preview.py         # Camera preview with landmarks drawn
-│   │   ├── overlay.py         # Click-through feedback ring
-│   │   └── theme.qss          # Styles
+│   │   ├── preview.py         # OpenCV debug window (developer tools)
+│   │   └── calibrate.py       # OpenCV calibration (developer tool)
 │   ├── config/
-│   │   ├── settings.py        # pydantic Settings model, load/save, migration
-│   │   └── defaults.py
+│   │   ├── defaults.py        # All tunable numbers
+│   │   ├── settings.py        # Settings (JSON in %APPDATA%\VisionAI), slider -> number maps
+│   │   └── calibration.py     # Saved pinch numbers
 │   ├── licensing/
-│   │   ├── license.py         # Activate / check key
-│   │   └── features.py        # Which gestures each plan unlocks
+│   │   ├── features.py        # Which gestures are free / paid
+│   │   ├── license.py         # Offline signed license keys
+│   │   ├── ed25519.py         # Signature maths (plain Python, RFC 8032 tested)
+│   │   └── public_key.py      # Public half of the owner's signing key
 │   └── platform/
 │       ├── dpi.py             # Per-monitor DPI awareness
 │       ├── autostart.py       # HKCU\...\Run registry key
-│       ├── hotkeys.py         # Global pause hotkey
-│       └── single_instance.py # Only one copy of the app may run
+│       ├── hotkey.py          # Global pause hotkey (Ctrl+Alt+P)
+│       └── uipi.py            # Detects administrator windows that block input
 ├── assets/
 │   ├── models/hand_landmarker.task
 │   └── icons/

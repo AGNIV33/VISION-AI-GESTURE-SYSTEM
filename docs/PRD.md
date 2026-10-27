@@ -58,7 +58,7 @@ Vision Pro uses eyes to aim and fingers to act. Our app uses **hand position to 
 | 6 | Right click | Thumb + middle finger pinch | Right click / context menu | Paid |
 | 7 | Two-hand zoom | Pinch with both hands, then move them apart or together | Real pinch-zoom (touch injection); Ctrl+scroll as a backup | Paid |
 | 8 | Two-hand rotate | Pinch with both hands, then rotate them like a steering wheel | Real rotate gesture (touch injection) | Paid |
-| 9 | Palm "Home" | Show your palm and pinch | Opens Task View (Win+Tab) | Paid |
+| 9 | Task View | Thumb + ring fingertip, hold half a second | Opens Task View (Win+Tab) | Paid |
 | 10 | Pause / Resume | Make a fist and hold it for 1.5 s (or use a hotkey or the tray) | Turns gesture control on/off | Free |
 
 \* **Open decision:** the free plan has 2-3 gestures. The suggested free set is **Move + Tap + Scroll** (plus Pause, which is a safety feature). Drag could be free instead of Scroll. The owner decides later.

@@ -1,4 +1,4 @@
-"""Entry point:  python -m vision_ai [--check | --debug | --cursor]"""
+"""Entry point. No arguments = tray app; --check, --debug, --cursor, --calibrate = tools."""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ def build_parser() -> argparse.ArgumentParser:
     mode.add_argument("--debug", action="store_true", help="show hand tracking (mouse NOT moved)")
     mode.add_argument("--cursor", action="store_true", help="show tracking AND move the mouse")
     mode.add_argument("--calibrate", action="store_true", help="measure your pinch numbers")
+    p.add_argument("--background", action="store_true", help="tray app: start hidden")
     p.add_argument("--camera", type=int, default=0, help="camera number (default 0)")
     p.add_argument("--backend", choices=["dshow", "msmf", "auto"], help="camera backend")
     p.add_argument("--size", help="camera picture size, for example 640x480")
@@ -33,6 +34,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def run_app(args: argparse.Namespace, camera: CameraConfig, control: bool) -> int:
+    """The developer tools: --debug, --cursor, --calibrate (OpenCV window)."""
     from vision_ai.core.tracker import find_model
 
     model = find_model()
@@ -40,49 +42,29 @@ def run_app(args: argparse.Namespace, camera: CameraConfig, control: bool) -> in
         print("Hand model not found. Run:  python scripts/download_model.py")
         return 2
 
-    from vision_ai.actions import win_input
-    from vision_ai.actions.dispatcher import Dispatcher, WindowsBackend
-    from vision_ai.core.pipeline import Pipeline
-    from vision_ai.gestures.cursor_controller import CursorController
-    from vision_ai.gestures.cursor_mapper import CursorMapper, Rect
-    from vision_ai.gestures.recognizer import GestureRecognizer
+    from vision_ai.config.calibration import load_gesture_config
+    from vision_ai.core.runtime import build_pipeline
     from vision_ai.platform.dpi import enable_dpi_awareness
     from vision_ai.ui.preview import run_preview
 
     cursor_cfg = replace(CursorConfig(), main_hand=args.main_hand)
-    from vision_ai.config.calibration import load_gesture_config
-
     gesture_cfg, calibrated = load_gesture_config()
     if not calibrated and not args.calibrate:
         print("Tip: run  python -m vision_ai --calibrate  once so clicks fit your hand.")
-    recognizer = GestureRecognizer(gesture_cfg)
-    dispatcher = mover = None
-    pipe_ref: list = []
     enable_dpi_awareness()
-    if control:
-        if sys.platform != "win32":
-            print("Mouse control only works on Windows. Use --debug here.")
-            return 2
-        screen = win_input.virtual_screen_rect()
-
-        def mover(x: int, y: int) -> None:
-            win_input.move_abs(x, y, screen)
-
-        def toggle_pause() -> None:
-            p = pipe_ref[0]
-            p.set_control_enabled(not p.control_enabled)
-            print("Paused (make a fist again to resume)" if not p.control_enabled else "Resumed")
-
-        dispatcher = Dispatcher(WindowsBackend(), toggle_pause)
-    else:
-        screen = Rect(0, 0, 1920, 1080)  # --debug: gestures are shown, nothing is clicked
-    controller = CursorController(CursorMapper(Rect(*cursor_cfg.box), screen), cursor_cfg)
-
     tracker_cfg = replace(TrackerConfig(), num_hands=args.hands)
-    pipe = Pipeline(
-        camera, tracker_cfg, cursor_cfg, model, controller, mover, recognizer, dispatcher
-    )
-    pipe_ref.append(pipe)
+
+    def on_pause(paused: bool) -> None:
+        print("Paused (make a fist again to resume)" if paused else "Resumed")
+
+    try:
+        pipe = build_pipeline(
+            camera, tracker_cfg, cursor_cfg, gesture_cfg, model,
+            control=control, on_pause_changed=on_pause,
+        )  # fmt: skip
+    except OSError as exc:
+        print(f"{exc}. Use --debug here.")
+        return 2
     pipe.start()
     try:
         pipe.capture.opened.wait(timeout=15)
@@ -132,8 +114,9 @@ def main(argv: list[str] | None = None) -> int:
         return run_checks(camera, TrackerConfig())
     if args.debug or args.cursor or args.calibrate:
         return run_app(args, camera, control=args.cursor)
-    parser.print_help()
-    return 0
+    from vision_ai.app.main import run
+
+    return run(background=args.background)
 
 
 if __name__ == "__main__":

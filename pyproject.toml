@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vision-ai"
-version = "0.1.0"
+version = "0.2.0"
 description = "Webcam hand-gesture control for Windows"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -14,6 +14,7 @@ dependencies = [
     # opencv-python: two cv2 packages in one environment clash.
     "opencv-contrib-python>=4.9",
     "mediapipe>=0.10.30",
+    "PySide6>=6.6",
 ]
 
 [project.optional-dependencies]
@@ -35,3 +36,6 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/vision_ai/app/theme.py" = ["E501"]  # long CSS lines

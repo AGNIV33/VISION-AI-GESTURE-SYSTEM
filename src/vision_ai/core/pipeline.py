@@ -14,10 +14,11 @@ from vision_ai.config.defaults import CameraConfig, CursorConfig, TrackerConfig
 from vision_ai.core.capture import CaptureThread
 from vision_ai.core.slot import LatestSlot, RateMeter
 from vision_ai.core.tracker import TrackerThread
-from vision_ai.core.types import Frame, HandFrame
+from vision_ai.core.types import Frame, HandFrame, aim_point
 from vision_ai.gestures.cursor_controller import CursorController
 from vision_ai.gestures.hand_pose import HandPose, read_pose
-from vision_ai.gestures.recognizer import GestureRecognizer
+from vision_ai.gestures.recognizer import GestureOutput, GestureRecognizer
+from vision_ai.gestures.two_hand import TwoHandZoom
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ class EngineThread(threading.Thread):
         cursor: CursorThread | None,
         recognizer: GestureRecognizer | None = None,
         dispatcher: Dispatcher | None = None,
+        two_hand: TwoHandZoom | None = None,
     ) -> None:
         super().__init__(name="engine", daemon=True)
         self._in = hands
@@ -49,6 +51,8 @@ class EngineThread(threading.Thread):
         self._cursor = cursor
         self._recognizer = recognizer
         self._dispatcher = dispatcher
+        self._two_hand = two_hand
+        self._hold = False
         self._stop_evt = threading.Event()
         self.fps = RateMeter()
         self.control_enabled = True
@@ -78,6 +82,21 @@ class EngineThread(threading.Thread):
                 self._dispatcher.release_all()
             self._out.close()
 
+    def _two_hand_step(self, frame: HandFrame) -> GestureOutput | None:
+        th, rec = self._two_hand, self._recognizer
+        if th is None or rec is None:
+            return None
+        if len(frame.hands) == 2:
+            a, b = frame.hands
+            (ax, ay), (bx, by) = aim_point(a), aim_point(b)
+            dist = ((ax - bx) * a.aspect) ** 2 + (ay - by) ** 2
+            out = th.update((read_pose(a, rec.cfg), read_pose(b, rec.cfg)), dist**0.5 * 1000.0)
+        else:
+            out = th.update(None, None)
+        if not out.active:
+            return None
+        return GestureOutput("two-hand zoom", freeze=True, events=list(out.events))
+
     def _process(self, frame: HandFrame, was_enabled: bool) -> EngineOutput:
         ctrl = self._controller
         if ctrl is None:
@@ -85,12 +104,19 @@ class EngineThread(threading.Thread):
         if self.control_enabled and not was_enabled:
             ctrl.reset()
         hand = ctrl.pick_hand(frame)
+        ctrl.holding = self._hold  # trackpad mode: do not move while pinching, scrolling...
         aim = ctrl.update(frame)
         pose = read_pose(hand, self._recognizer.cfg) if (hand and self._recognizer) else None
 
         g = None
         if self._recognizer is not None:
-            g = self._recognizer.update(pose, ctrl.last_unit if hand else None, frame.t)
+            two = self._two_hand_step(frame)
+            if two is not None:  # two-hand zoom wins over the one-hand gestures
+                self._recognizer.update(None, None, frame.t)
+                g = two
+            else:
+                g = self._recognizer.update(pose, ctrl.last_unit if hand else None, frame.t)
+            self._hold = g.freeze
             if self._dispatcher is not None and g.events:
                 self._dispatcher.handle(g.events, paused=not self.control_enabled)
                 if any(e[0] == "click" for e in g.events):
@@ -125,6 +151,7 @@ class Pipeline:
         mover: Callable[[int, int], None] | None = None,
         recognizer: GestureRecognizer | None = None,
         dispatcher: Dispatcher | None = None,
+        two_hand: TwoHandZoom | None = None,
     ) -> None:
         self.frames: LatestSlot[Frame] = LatestSlot()
         self.hands: LatestSlot[HandFrame] = LatestSlot()
@@ -136,7 +163,7 @@ class Pipeline:
         self.recognizer = recognizer
         self.dispatcher = dispatcher
         self.engine = EngineThread(
-            self.hands, self.output, controller, self.cursor, recognizer, dispatcher
+            self.hands, self.output, controller, self.cursor, recognizer, dispatcher, two_hand
         )
 
     def start(self) -> None:

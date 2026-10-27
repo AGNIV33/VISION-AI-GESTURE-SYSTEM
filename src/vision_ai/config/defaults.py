@@ -50,6 +50,9 @@ class CursorConfig:
     smoother_tau_s: float = 0.012
     predict_gain: float = 0.5  # 0 = no prediction
     max_predict_s: float = 0.06
+    # Trackpad mode (relative movement with acceleration)
+    trackpad_accel: float = 1.2  # extra gain at fast hand speed (0 = none)
+    trackpad_ref_speed: float = 600.0  # box units / second where acceleration is half-way
 
 
 FILTER_UNITS = 1000.0
@@ -80,3 +83,11 @@ class GestureConfig:
     zoom_confirm_frames: int = 4  # thumb on index+middle this long before zoom starts
     pose_exit_frames: int = 6  # pose must be gone this many pictures to end scrolling
     fist_hold_s: float = 1.5  # hold a fist this long to pause / resume
+    ring_pinch_on: float = 0.30  # thumb + ring finger (Task View)
+    ring_pinch_off: float = 0.42
+    home_hold_s: float = 0.50  # hold the ring pinch this long to open Task View
+    scroll_inertia_tau_s: float = 0.35  # after you stop scrolling it coasts and fades
+    scroll_inertia_min_v: float = 240.0  # wheel units / second needed to start coasting
+    scroll_inertia_stop_v: float = 25.0
+    two_hand_gain: float = 1.6  # wheel units per box unit change of the distance between hands
+    two_hand_confirm_frames: int = 3

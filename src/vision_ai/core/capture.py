@@ -96,6 +96,7 @@ class CaptureThread(threading.Thread):
         self.error: str | None = None
         self.fps = RateMeter()
         self.size: tuple[int, int] = (0, 0)
+        self.brightness: float = 128.0  # 0 (black) .. 255; updated twice a second
 
     def stop(self) -> None:
         self._stop_evt.set()
@@ -112,6 +113,7 @@ class CaptureThread(threading.Thread):
             return
         self.opened.set()
         failures = 0
+        count = 0
         try:
             while not self._stop_evt.is_set():
                 ok, image = cap.read()
@@ -129,6 +131,9 @@ class CaptureThread(threading.Thread):
                     image = cv2.flip(image, 1)
                 self.size = (image.shape[1], image.shape[0])
                 self.fps.tick(t)
+                count += 1
+                if count % 15 == 0:  # cheap: look at 1 pixel in 256
+                    self.brightness = float(image[::16, ::16].mean())
                 self._out.put(Frame(t=t, image=image))
         finally:
             cap.release()

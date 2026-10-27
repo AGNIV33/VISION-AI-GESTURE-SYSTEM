@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pytest
 
 from vision_ai.core.types import LM, Hand, HandFrame
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")  # Qt tests run without a screen
 
 
 def make_hand(side="right", index_mcp=(0.5, 0.5), thumb_index_gap=0.10, palm=0.09) -> Hand:

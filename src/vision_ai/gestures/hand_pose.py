@@ -26,6 +26,7 @@ class HandPose:
     pinch_index: float  # thumb tip to index tip / palm size
     pinch_middle: float  # thumb tip to middle tip / palm size
     fingers: tuple[int, int, int, int]  # index, middle, ring, pinky: EXT / FOLD / UNKNOWN
+    pinch_ring: float = 9.0  # thumb tip to ring tip / palm size (Task View gesture)
 
     @property
     def is_fist(self) -> bool:
@@ -70,5 +71,6 @@ def read_pose(hand: Hand, cfg: GestureConfig) -> HandPose:
     return HandPose(
         pinch_index=_dist(pts, LM.THUMB_TIP, LM.INDEX_TIP) / palm,
         pinch_middle=_dist(pts, LM.THUMB_TIP, LM.MIDDLE_TIP) / palm,
+        pinch_ring=_dist(pts, LM.THUMB_TIP, LM.RING_TIP) / palm,
         fingers=fingers,  # type: ignore[arg-type]
     )
