@@ -6,6 +6,7 @@ import platform
 import struct
 import sys
 import time
+from dataclasses import replace
 
 from vision_ai.config.defaults import CameraConfig, TrackerConfig
 
@@ -14,6 +15,27 @@ OK, WARN, FAIL = "OK  ", "WARN", "FAIL"
 
 def _line(status: str, name: str, detail: str = "") -> None:
     print(f"[{status}] {name}" + (f": {detail}" if detail else ""))
+
+
+def _measure(cfg: CameraConfig, seconds: float = 2.0) -> tuple[float, tuple[int, int]] | None:
+    """Open the camera with these settings and measure its real speed. None if it fails."""
+    from vision_ai.core.capture import open_camera
+
+    cap, _ = open_camera(cfg, fallback=False)  # test exactly this mode, no silent fallback
+    if cap is None:
+        return None
+    try:
+        frames, shape, t0 = 0, None, time.monotonic()
+        while time.monotonic() - t0 < seconds:
+            ok, img = cap.read()
+            if ok:
+                frames += 1
+                shape = img.shape
+        if not frames or shape is None:
+            return None
+        return frames / (time.monotonic() - t0), (shape[1], shape[0])
+    finally:
+        cap.release()
 
 
 def run_checks(camera: CameraConfig, tracker: TrackerConfig) -> int:
@@ -55,42 +77,51 @@ def run_checks(camera: CameraConfig, tracker: TrackerConfig) -> int:
     else:
         _line(OK, "Hand model", str(model))
 
-    from vision_ai.core.capture import open_camera
-
-    cap, backend = open_camera(camera)
-    if cap is None:
+    # Test each camera mode and keep the fastest one.
+    backends = ["dshow", "msmf"] if sys.platform == "win32" else ["auto"]
+    best: tuple[float, str] | None = None
+    for name in backends:
+        res = _measure(replace(camera, backend=name))
+        if res is None:
+            _line(WARN, f"Camera ({name})", "could not open it, or it sent no pictures")
+            continue
+        fps, (w, h) = res
+        _line(
+            OK if fps >= 25 else WARN,
+            f"Camera ({name})",
+            f"{fps:.1f} fps at {w}x{h} (asked for {camera.width}x{camera.height})",
+        )
+        if best is None or fps > best[0]:
+            best = (fps, name)
+    if best is None:
         _line(
             FAIL,
             "Camera",
-            f"cannot open camera {camera.index} (close other apps that use it, or try --camera 1)",
+            f"cannot use camera {camera.index} (close other apps that use it, or try --camera 1)",
         )
+        return 1
+    if best[0] < 25:
+        _line(WARN, "Camera is slow", "turn on more light (a lamp in front of you) and run again")
+    camera = replace(camera, backend=best[1])
+    _line(OK, "Best camera mode", f"{best[1]} (use: --backend {best[1]})")
+
+    from vision_ai.core.capture import open_camera
+
+    cap, _backend = open_camera(camera)
+    if cap is None:
+        _line(FAIL, "Camera", "cannot reopen the camera")
         return 1
 
     try:
-        # 1) raw camera speed
-        frames, t0, shape = 0, time.monotonic(), None
-        while time.monotonic() - t0 < 2.0:
-            ok, img = cap.read()
-            if ok:
-                frames += 1
-                shape = img.shape
-        secs = time.monotonic() - t0
-        if not frames or shape is None:
-            _line(FAIL, "Camera", "opened but sent no pictures")
-            return 1
-        fps = frames / secs
-        _line(
-            OK if fps >= 25 else WARN,
-            "Camera speed",
-            f"{fps:.1f} fps at {shape[1]}x{shape[0]} (backend id {backend})"
-            + ("" if fps >= 25 else "  -> low; try better light, or --backend msmf"),
-        )
-
         # 2) hand tracking speed
         if model is not None:
             import mediapipe as mp
 
-            print("      Hold your hand in front of the camera for 3 seconds...")
+            print("      Next: hand test. Put your hand in front of the camera when I say GO.")
+            for n in (3, 2, 1):
+                print(f"      {n}...")
+                time.sleep(1.0)
+            print("      GO - hold your hand up and move it slowly for 3 seconds")
             seen = total = 0
             infer_ms = 0.0
             last_ts = -1

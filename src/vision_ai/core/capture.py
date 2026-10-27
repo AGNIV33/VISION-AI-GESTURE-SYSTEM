@@ -24,11 +24,13 @@ def _backend_ids(name: str) -> list[int]:
     return table.get(name, [cv2.CAP_ANY])
 
 
-def open_camera(cfg: CameraConfig):
-    """Open the camera, trying the preferred backend first. Returns (capture, backend_id)."""
+def open_camera(cfg: CameraConfig, fallback: bool = True):
+    """Open the camera, trying the preferred backend first (and the other one if
+    `fallback`). Returns (capture, backend_id)."""
     import cv2
 
-    for backend in _backend_ids(cfg.backend):
+    ids = _backend_ids(cfg.backend)
+    for backend in ids if fallback else ids[:1]:
         cap = cv2.VideoCapture(cfg.index, backend)
         if cap.isOpened():
             # MJPG is what lets most webcams deliver 30 fps at 640x480.
